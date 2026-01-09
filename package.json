@@ -1,0 +1,85 @@
+{
+  "name": "popverse-kingdoms",
+  "version": "1.0.0",
+  "description": "Discord-based strategy MMO with territory control, hero collection, and competitive PvP",
+  "type": "module",
+  "main": "dist/index.js",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "start:prod": "pm2 start ecosystem.config.cjs --env production",
+    "test": "jest --runInBand",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "lint": "eslint src --ext .ts",
+    "lint:fix": "eslint src --ext .ts --fix",
+    "format": "prettier --write \"src/**/*.ts\"",
+    "db:migrate": "tsx node_modules/.bin/knex migrate:latest",
+    "db:migrate:dev": "tsx node_modules/.bin/knex migrate:latest --env development",
+    "db:migrate:prod": "tsx node_modules/.bin/knex migrate:latest --env production",
+    "db:rollback": "tsx node_modules/.bin/knex migrate:rollback",
+    "db:seed": "tsx node_modules/.bin/knex seed:run",
+    "db:seed:dev": "tsx node_modules/.bin/knex seed:run --env development",
+    "docker:dev": "docker compose -f docker-compose.dev.yml up -d",
+    "docker:dev:down": "docker compose -f docker-compose.dev.yml down",
+    "docker:prod": "docker compose -f docker-compose.prod.yml up -d",
+    "docker:prod:down": "docker compose -f docker-compose.prod.yml down",
+    "reset": "tsx scripts/reset-dev.ts",
+    "reset:full": "tsx scripts/reset-dev.ts && npm run db:seed:dev",
+    "test:players": "tsx scripts/generate-test-players.ts",
+    "prepare": "husky install"
+  },
+  "keywords": [
+    "discord",
+    "bot",
+    "game",
+    "strategy",
+    "mmo"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "bullmq": "^5.1.0",
+    "canvas": "^3.2.0",
+    "cors": "^2.8.5",
+    "discord.js": "^14.14.1",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "helmet": "^7.1.0",
+    "ioredis": "^5.3.2",
+    "jsonwebtoken": "^9.0.2",
+    "knex": "^3.1.0",
+    "pg": "^8.11.3",
+    "uuid": "^9.0.1",
+    "winston": "^3.11.0",
+    "zod": "^3.22.4"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.17",
+    "@types/express": "^4.17.21",
+    "@types/jest": "^29.5.11",
+    "@types/jsonwebtoken": "^9.0.5",
+    "@types/node": "^20.10.0",
+    "@types/uuid": "^9.0.7",
+    "@typescript-eslint/eslint-plugin": "^6.13.2",
+    "@typescript-eslint/parser": "^6.13.2",
+    "eslint": "^8.55.0",
+    "husky": "^8.0.3",
+    "jest": "^29.7.0",
+    "lint-staged": "^15.2.0",
+    "prettier": "^3.1.0",
+    "ts-jest": "^29.1.1",
+    "tsx": "^4.6.2",
+    "typescript": "^5.3.2"
+  },
+  "lint-staged": {
+    "*.ts": [
+      "eslint --fix",
+      "prettier --write"
+    ]
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

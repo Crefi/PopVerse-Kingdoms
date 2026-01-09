@@ -1,0 +1,357 @@
+Folder structure
+
+popverse-kingdoms/  # Root project folder
+├── src/            # Main source code
+│   ├── commands/   # Discord slash commands (e.g., !attack, !map)
+│   │   ├── arena.js
+│   │   ├── attack.js
+│   │   ├── build.js
+│   │   ├── guild.js
+│   │   ├── map.js
+│   │   └── ...     # One file per command or group
+│   ├── events/     # Discord event handlers (e.g., ready, interactionCreate)
+│   │   ├── ready.js
+│   │   ├── interactionCreate.js
+│   │   └── ...     # Other events like messageCreate if needed
+│   ├── modules/    # Core game logic modules
+│   │   ├── combat/ # Combat resolution logic
+│   │   │   └── combat.js
+│   │   ├── economy/ # Resource production, buildings
+│   │   │   └── economy.js
+│   │   ├── heroes/ # Hero management, leveling
+│   │   │   └── heroes.js
+│   │   ├── map/    # Map generation, viewing
+│   │   │   └── map.js
+│   │   ├── arena/  # Arena-specific logic
+│   │   │   └── arena.js
+│   │   ├── conquest/ # Conquest event logic
+│   │   │   └── conquest.js
+│   │   └── utils/  # Shared utilities (e.g., RNG, validators)
+│   │       └── utils.js
+│   ├── services/   # Business logic services (e.g., DB interactions)
+│   │   ├── dbService.js  # PostgreSQL queries via pg/knex
+│   │   ├── cacheService.js  # Redis operations
+│   │   ├── queueService.js  # BullMQ job handling
+│   │   └── authService.js   # User auth/linking (e.g., for Twitch)
+│   ├── models/     # Data models (e.g., schemas for DB)
+│   │   ├── player.js
+│   │   ├── guild.js
+│   │   ├── hero.js
+│   │   └── ...     # Match DB tables
+│   ├── middlewares/ # Express middlewares (for web dashboard)
+│   │   ├── auth.js
+│   │   └── errorHandler.js
+│   ├── routes/     # Express routes (for optional web dashboard)
+│   │   ├── map.js  # e.g., /map endpoint
+│   │   └── api.js  # General API routes
+│   ├── integrations/ # Optional integrations (e.g., Twitch bot)
+│   │   └── twitch/ # Separate Twitch bot code
+│   │       ├── commands.js
+│   │       └── events.js
+│   └── index.js    # Main bot entry point (client login, event/command loading)
+├── tests/          # Jest tests
+│   ├── unit/       # Unit tests (e.g., combat logic)
+│   │   └── combat.test.js
+│   ├── integration/ # Integration tests (e.g., DB, queues)
+│   │   └── dbService.test.js
+│   └── e2e/        # End-to-end tests (e.g., command flows)
+│       └── attackCommand.test.js
+├── config/         # Configuration files
+│   ├── env/        # Environment-specific configs (loaded via dotenv)
+│   │   ├── .env.dev
+│   │   └── .env.prod
+│   ├── prometheus.yml  # Prometheus config
+│   └── knexfile.js # Knex migrations config
+├── migrations/     # Knex DB migrations
+│   └── 20260106_initial_schema.js  # Timestamped migration files
+├── docker/         # Docker-related files
+│   ├── Dockerfile  # For building the bot image
+│   └── docker-compose.yml  # Services: bot, redis, postgres, prometheus, grafana, nginx
+├── logs/           # Runtime logs (git-ignored)
+├── public/         # Static files for web dashboard (e.g., HTML/JS for map)
+│   └── index.html
+├── .gitignore      # Ignore node_modules, .env, logs, etc.
+├── package.json    # Dependencies (discord.js, bullmq, redis, pg, knex, express, etc.)
+├── ecosystem.config.js  # PM2 config for clustering
+├── README.md       # Project overview, setup instructions
+└── LICENSE         # e.g., MIT
+
+
+
+
+PopVerse Kingdoms – Architecture Design v2.0 (Node.js Edition)
+1. Overview
+This updated document outlines the architecture for PopVerse Kingdoms, optimized for Node.js to ensure high performance in real-time Discord interactions (e.g., fast command handling, low-latency event resolution). Node.js's event-driven model handles concurrency well, making it ideal for bots with timers, DB queries, and API calls. The design remains modular, with caching for speed and security validations to prevent exploits.
+Key assumptions: Single bot instance per Discord server, but sharded for multi-server if needed. VPC hosting (e.g., AWS EC2) with Docker for easy deployment.
+2. Tech Stack
+Backend / Bot
+
+Language: JavaScript (Node.js 20+ – leverages async/await, top-tier performance for I/O-bound tasks like Discord API calls).
+Discord Library: discord.js (v14+ – mature, supports commands, events, interactions; faster than discord.py in benchmarks for message handling).
+Task Scheduling: BullMQ (with Redis) or Node-Cron for timers (e.g., build completions, march resolutions, resource production). BullMQ is preferred for queued jobs to handle high load without blocking.
+Caching: Redis (for player status, map views, cooldowns – reduces DB hits by 80-90%).
+HTTP Server (Optional Web Dashboard): Express.js (simple, fast for serving map data; integrate with Socket.io if real-time march tracking is needed).
+
+Database
+
+Primary DB: PostgreSQL (same as before – relational for structured data; use pg library for Node.js connections).
+Why PostgreSQL? Still the best fit; Node.js with pg-pool handles connections efficiently. Cache heavy queries with Redis.
+
+Other Tools
+
+Hosting: Your VPC (e.g., EC2 instance with Node.js runtime; use PM2 for process management/clustering to utilize multi-cores).
+Logging/Monitoring: Winston or Pino (fast logging); Sentry for error tracking.
+Testing: Jest for unit tests (e.g., combat simulations).
+Diagrams: Mermaid (same as before, embedded).
+Deployment: Docker Compose for VPC (containerize bot + Redis + Postgres); Nginx as reverse proxy if exposing web dashboard.
+
+This stack is common for high-perf Discord bots (e.g., music bots like Rythm or game bots like Epic RPG), as per Discord dev communities. Node.js bots often achieve <50ms response times, vs. Python's 100-200ms under load.
+3. System Architecture
+High-Level Components
+
+Discord Bot Core: Handles commands (e.g., slash commands via discord.js), events (e.g., ready, interactionCreate), and channel management.
+Game Logic Layer: Modules in JS (e.g., combat.js with power calcs and Math.random for RNG).
+Data Access Layer: Uses pg for DB queries; Redis for caching (e.g., node-redis client).
+Timer/Queue System: BullMQ queues for timed events (e.g., addJob with delay for marches).
+Web Dashboard (Optional): Express app for map rendering (e.g., serve JSON for client-side rendering with Leaflet.js).
+Admin Tools: Restricted commands (e.g., via roles).
+
+Architecture Diagram (Mermaid Flowchart)
+
+
+graph TD
+    A[Discord User] -->|Commands/Interactions| B[Discord Bot (discord.js)]
+    B -->|Parse Command| C[Command Handler]
+    C -->|Game Logic| D[Modules: Combat, Economy, Map, Arena, Conquest]
+    D -->|Read/Write| E[Cache (Redis)]
+    E -->|Miss| F[Database (PostgreSQL)]
+    D -->|Schedule Task| G[Task Queue (BullMQ)]
+    G -->|Job Processed| D
+    B -->|Reply/DM| A
+    H[Admin] -->|Admin Commands| B
+    I[Web Dashboard (Express)] -->|API Calls| F
+    A -->|!map link| I
+
+Flow Example (Attack Command):
+User sends /attack (slash command).
+Bot validates (e.g., cache check for resources/cooldowns).
+Logic calculates march time, queues job in BullMQ.
+On job completion: Resolve battle, update DB, send DM via bot.
+Cache updates with ioredis.
+
+Performance Optimizations: Use discord.js's built-in rate limiting; cluster with PM2 for multi-threaded handling on VPC.
+
+4. Database Design
+Same as v1.0 (PostgreSQL tables unchanged – players, guilds, heroes, etc.). In Node.js:
+
+Use pg or knex.js for queries/migrations.
+For JSON fields (e.g., drops in npcs), use PostgreSQL JSONB.
+Wipes: Use transactions for atomic resets (e.g., truncate tables except persistent ones).
+
+ER Diagram remains the same (Mermaid from previous version).
+
+4. Database Design
+Key Design Principles
+
+Normalization: 3NF to avoid redundancy (e.g., heroes reference players).
+Indexing: On frequent queries (e.g., player_id, coords).
+Wipes: Seasonal tables or soft deletes (e.g., archive data, reset core tables).
+Map Handling: Store 10,000 tiles in a single table (efficient with composite PK on x,y).
+Relationships: Players own most entities; guilds share lands.
+Auditing: Timestamps for all records; logs for battles.
+
+Tables
+Use PostgreSQL schema. Primary keys are auto-incrementing integers unless noted.
+
+Table,Description,Key Fields
+players,Player profiles and persistent data.,"id (PK), discord_id (unique), username, faction (enum: cinema, otaku, arcade), x_coord, y_coord, diamonds, prestige_points, arena_points, created_at"
+guilds,Guild details.,"id (PK), name (unique), leader_player_id (FK to players), max_members (default 20), bank_food, bank_iron, bank_gold, created_at"
+guild_members,Many-to-many for guild membership.,"guild_id (FK), player_id (FK), role (enum: leader, officer, member), joined_at"
+heroes,Player-owned heroes.,"id (PK), player_id (FK), name, rarity (enum: common, rare, epic, legendary), level (default 1), xp, gear_weapon, gear_armor"
+buildings,Player buildings.,"id (PK), player_id (FK), type (enum: hq, barracks, farm, etc.), level (default 1), upgrade_start_time, upgrade_end_time"
+troops,Player troops by tier.,"id (PK), player_id (FK), tier (enum: t1, t2, t3, t4), quantity, training_start_time, training_end_time"
+resources,Player resources (one row per type).,"id (PK), player_id (FK), type (enum: food, iron, gold), amount, last_production_time"
+lands,Land parcels (owned by player or guild).,"id (PK), type (enum: farmstead, mining_camp, trade_hub, strategic_fort), x_start, y_start, size_x, size_y, owner_player_id (FK nullable), owner_guild_id (FK nullable), purchase_time"
+arena_teams,Player's attack/defense teams.,"id (PK), player_id (FK), team_type (enum: defense, attack), hero1_id (FK to heroes), hero2_id (FK), hero3_id (FK)"
+arena_logs,Battle history for defense logs.,"id (PK), defender_player_id (FK), attacker_player_id (FK), result (enum: win, loss), timestamp, details (JSON for report)"
+map_tiles,100x100 grid tiles.,"x (int, PK part), y (int, PK part), terrain_type (enum: plains, mountain, lake, resource_node, etc.), fog_of_war_players (array of player_ids who explored), land_id (FK nullable), occupant_player_id (FK nullable for cities), npc_id (FK nullable)"
+npcs,NPC instances.,"id (PK), type (enum: bandit_camp, goblin_outpost, dragon_lair), power, drops (JSON: {food:500, ...}), respawn_time"
+marches,"Active marches (attacks, scouts).","id (PK), player_id (FK), target_x, target_y, hero_id (FK), troops_json (JSON for counts), start_time, end_time, type (enum: attack, scout)"
+conquests,"Active Conquest events (ephemeral, or log per event).","id (PK), start_time, end_time, control_points_json (JSON array of points with coords, owner, queue)"
+researches,Player research progress.,"id (PK), player_id (FK), type (enum: troop_training_i, etc.), level (0-5), start_time, end_time"
+daily_quests,Player daily progress.,"id (PK), player_id (FK), date, quests_json (JSON: {train_troops: {progress:0, target:50}})"
+seasons,Historical season data for hall of fame.,"id (PK), number, start_date, end_date, hall_of_fame_json (JSON for leaderboards)"
+
+
+ER diagram 
+
+erDiagram
+    PLAYERS ||--o{ GUILDS : leads
+    PLAYERS ||--o{ GUILD_MEMBERS : is_member
+    GUILDS ||--|{ GUILD_MEMBERS : has_members
+    PLAYERS ||--o{ HEROES : owns
+    PLAYERS ||--o{ BUILDINGS : has
+    PLAYERS ||--o{ TROOPS : has
+    PLAYERS ||--o{ RESOURCES : has
+    PLAYERS ||--o{ LANDS : owns
+    GUILDS ||--o{ LANDS : owns
+    PLAYERS ||--o{ ARENA_TEAMS : has
+    PLAYERS ||--o{ ARENA_LOGS : defender
+    PLAYERS ||--o{ ARENA_LOGS : attacker
+    MAP_TILES ||--o{ LANDS : part_of
+    MAP_TILES ||--o{ PLAYERS : city_of
+    MAP_TILES ||--o{ NPCS : has
+    PLAYERS ||--o{ MARCHES : starts
+    PLAYERS ||--o{ RESEARCHES : has
+    PLAYERS ||--o{ DAILY_QUESTS : has
+
+    PLAYERS {
+        int id PK
+        bigint discord_id
+        string username
+        string faction
+        int x_coord
+        int y_coord
+        int diamonds
+        int prestige_points
+        int arena_points
+    }
+
+    GUILDS {
+        int id PK
+        string name
+        int leader_player_id FK
+        int bank_food
+        int bank_iron
+        int bank_gold
+    }
+
+    GUILD_MEMBERS {
+        int guild_id FK
+        int player_id FK
+        string role
+    }
+
+    HEROES {
+        int id PK
+        int player_id FK
+        string name
+        string rarity
+        int level
+        int xp
+    }
+
+    BUILDINGS {
+        int id PK
+        int player_id FK
+        string type
+        int level
+        timestamp upgrade_start_time
+        timestamp upgrade_end_time
+    }
+
+    TROOPS {
+        int id PK
+        int player_id FK
+        string tier
+        int quantity
+        timestamp training_start_time
+        timestamp training_end_time
+    }
+
+    RESOURCES {
+        int id PK
+        int player_id FK
+        string type
+        int amount
+        timestamp last_production_time
+    }
+
+    LANDS {
+        int id PK
+        string type
+        int x_start
+        int y_start
+        int size_x
+        int size_y
+        int owner_player_id FK
+        int owner_guild_id FK
+    }
+
+    ARENA_TEAMS {
+        int id PK
+        int player_id FK
+        string team_type
+        int hero1_id FK
+        int hero2_id FK
+        int hero3_id FK
+    }
+
+    ARENA_LOGS {
+        int id PK
+        int defender_player_id FK
+        int attacker_player_id FK
+        string result
+        timestamp timestamp
+        json details
+    }
+
+    MAP_TILES {
+        int x PK
+        int y PK
+        string terrain_type
+        int[] fog_of_war_players
+        int land_id FK
+        int occupant_player_id FK
+        int npc_id FK
+    }
+
+    NPCS {
+        int id PK
+        string type
+        int power
+        json drops
+        timestamp respawn_time
+    }
+
+    MARCHES {
+        int id PK
+        int player_id FK
+        int target_x
+        int target_y
+        int hero_id FK
+        json troops_json
+        timestamp start_time
+        timestamp end_time
+        string type
+    }
+
+    RESEARCHES {
+        int id PK
+        int player_id FK
+        string type
+        int level
+        timestamp start_time
+        timestamp end_time
+    }
+
+    DAILY_QUESTS {
+        int id PK
+        int player_id FK
+        date date
+        json quests_json
+    }
+
+
+
+    Notes on Diagram: Simplified; in practice, add more constraints (e.g., unique indexes, triggers for production). For JSON fields, use PostgreSQL's JSONB for queryability.
+Initial Setup: On !setup start, populate map_tiles with generated terrain, spawn initial lands/NPCs.
+5. Implementation Notes
+
+Commands: Use discord.js's SlashCommandBuilder for modern commands (e.g., autocomplete for heroes).
+Events: client.on('ready', loadTimersFromDB); client.on('interactionCreate', handleCommand).
+Combat Simulation: In combat.js, use crypto.randomBytes for better RNG if needed; async functions for non-blocking.
+Season Wipes: Cron job to archive data and reset tables.
+Error Handling: Try/catch with user-friendly replies (e.g., "Invalid coords!").
+Security: Validate inputs with Joi; use prepared statements in pg to prevent SQL injection.
+

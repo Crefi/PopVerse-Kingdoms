@@ -1,0 +1,117 @@
+PopVerse Kingdoms – Best Practices Guide v1.0
+This document compiles detailed best practices for each component in the tech stack for PopVerse Kingdoms, based on the latest recommendations as of 2026. These are drawn from industry guides, tutorials, and expert articles to ensure performance, security, scalability, and maintainability for your Discord bot game. Practices are tailored to a Node.js environment hosted on a Hetzner VPS, with considerations for real-time features like marches, events, and integrations (e.g., optional Twitch bot).
+1. Language: JavaScript (Node.js 20+)
+Node.js 20+ emphasizes native features, minimalism, and security in 2026, focusing on ESM, worker threads, and AI integrations for backend efficiency.
+
+Adopt ES Modules (ESM) Over CommonJS: Use import/export for better tree-shaking, browser compatibility, and consistency. Avoid mixing with require to prevent dependency hell; configure "type": "module" in package.json.
+Leverage Worker Threads for CPU-Intensive Tasks: Offload heavy operations (e.g., combat simulations or map generation) to workers to avoid blocking the event loop. Use worker_threads module for parallel processing.
+Implement JWT Token Rotation and Secure Authentication: Rotate tokens regularly for security; use libraries like jsonwebtoken with short-lived access tokens and refresh mechanisms.
+Follow Modular and Layered Architecture Patterns: Organize code into modules (e.g., services, controllers, utils); use N-Tier (presentation, business, data layers) for scalability. Employ middleware patterns for request handling.
+Prioritize Security Practices: Scan dependencies with npm audit, enforce TLS 1.3, implement rate limiting (e.g., with express-rate-limit), and use helmet for HTTP headers. Avoid runtime vulnerabilities by pinning versions.
+Optimize Performance: Use clustering with PM2 for multi-core utilization; implement caching with Redis; monitor with Prometheus for memory leaks. Embrace "native-first" by minimizing third-party deps.
+Error Handling and Logging: Use structured logging (e.g., with Pino); handle async errors with try/catch in promises. Integrate Sentry for tracking.
+Testing and CI/CD: Write tests with Jest; automate with GitHub Actions. Use Docker for consistent environments.
+
+2. Discord Library: discord.js (v14+)
+discord.js v14+ in 2026 focuses on slash commands, interactions, and clean architecture for bots, with emphasis on scalability and modern features like intents and sharding.
+
+Use Slash Commands Exclusively: Register commands globally or per-guild with SlashCommandBuilder; add options, choices, and autocomplete for user-friendly interactions (e.g., hero selection).
+Implement Clean Architecture: Structure with folders like commands/, events/, handlers/; use dependency injection for modularity. Follow templates for event handling (e.g., client.on('interactionCreate')).
+Handle Intents Properly: Specify required intents (e.g., GatewayIntentBits.Guilds) to optimize performance and comply with Discord's policies.
+Error Handling and Rate Limiting: Wrap interactions in try/catch; use Discord's built-in rate limits and defer replies for long-running tasks.
+Database Integration: Use a robust DB like PostgreSQL for storing user data; consider bot databases optimized for discord.js.
+Sharding for Scalability: Enable sharding for multi-server bots to distribute load.
+Testing: Mock discord.js with Jest; test commands and events in isolation.
+Updates and Maintenance: Regularly update to latest v14+ patches; monitor with Prometheus for API response times.
+
+3. Task Scheduling: BullMQ (with Redis) or Node-Cron
+BullMQ (Preferred for Queued Jobs)
+BullMQ in 2026 prioritizes scalability with Redis clusters, workers, and monitoring for background tasks like marches or resource production.
+
+Separate Redis Instance: Run Redis in a dedicated Docker container for isolation and control.
+Queue and Worker Setup: Create queues with new Queue(); process jobs in workers with new Worker(). Use JSON for job data storage/retrieval.
+Handle Failures and Retries: Configure retry strategies; log failures with Pino and monitor with Prometheus.
+Scaling: Use Redis clusters for high load; deploy workers across multiple processes with PM2.
+Monitoring: Track queue lengths and job statuses; integrate with Grafana dashboards.
+Best for Heavy Tasks: Decouple time-consuming operations (e.g., battle resolutions) to keep the bot responsive.
+
+Node-Cron (For Simpler Cron Jobs)
+Node-Cron suits lightweight scheduling like daily resets, with focus on non-overlapping jobs and error handling.
+
+Prevent Overlapping: Use locks (e.g., Redis-based) or flags to avoid concurrent runs.
+Error Handling: Wrap tasks in try/catch; log with structured formats and alert via Sentry.
+Timezone Management: Always specify timezones in cron strings.
+Separate Tasks: Use individual cron jobs for different functions (e.g., one for resource production).
+Offload Heavy Work: Pair with queues like BullMQ for CPU-intensive cron tasks.
+Monitoring: Log executions; integrate with Prometheus for cron metrics.
+
+4. Caching: Redis
+Redis caching in Node.js 2026 stresses invalidation, TTL, and integration with tools like BullMQ for performance.
+
+Cache Invalidation Strategies: Use write-invalidate on data changes; set TTL for auto-expiry; batch invalidates with tags.
+Connection Pooling: Use ioredis with pooling for efficient connections.
+Data Structures: Leverage hashes/sets for complex data (e.g., player sessions); avoid large keys.
+Rate Limiting and Security: Implement with Redis for API protection; use TLS for connections.
+Monitoring: Track hit rates with Prometheus; backup data regularly.
+Consistency: Ensure cache warms on startup; handle cache misses gracefully.
+Integration: Pair with PostgreSQL for cache-aside patterns.
+
+5. Web Dashboard: Express.js (optional)
+Express.js best practices in 2026 highlight structuring, security, and performance for APIs/dashboards.
+
+Folder Structure: Use clear organization (e.g., routes/, controllers/, services/, middlewares/); keep routes focused, controllers thin.
+Middleware Usage: Employ for logging, auth, error handling; use helmet for security headers.
+Performance: Enable gzip compression; avoid sync functions; use clustering with PM2.
+Security: Validate inputs with Joi; rate limit; use CORS properly.
+Error Handling: Centralized handler; integrate Sentry.
+Scalability: Deploy with Docker; use Nginx as reverse proxy.
+
+6. Database: PostgreSQL (with pg or knex.js)
+PostgreSQL with pg/knex.js in 2026 focuses on transactions, pooling, and migrations for reliable data handling.
+
+Connection Pooling: Use pg-pool or knex pooling to manage connections efficiently; limit to avoid exhaustion.
+Transactions: Wrap operations in transactions with knex for atomicity (e.g., battle updates).
+Migrations and Seeds: Use knex migrations for schema changes; include rollbacks.
+Query Optimization: Use prepared statements; index frequently queried fields.
+Error Handling: Handle connectivity issues; log queries with Sentry.
+Security: Use parameterized queries to prevent SQL injection.
+Layered Approach: Separate DB logic in services; test with Jest.
+
+7. Hosting/Deployment: VPS (Hetzner) with Docker Compose, PM2, Nginx
+Deployment on Hetzner VPS in 2026 emphasizes security, automation, and scalability with Docker.
+
+Server Hardening: Update OS, set up firewall (UFW), use SSH keys, install fail2ban.
+Docker Compose Setup: Containerize bot, Redis, Postgres; use volumes for persistence.
+PM2 Management: Cluster Node.js apps; enable ecosystem files for restarts.
+Nginx Reverse Proxy: Handle SSL with Certbot; configure for multiple services.
+Automation: Use Git for deploys; set up CI/CD with GitHub Actions.
+Monitoring: Integrate Prometheus node_exporter for VPS metrics.
+Backups: Regular snapshots on Hetzner; automate DB dumps.
+
+8. Logging/Monitoring: Prometheus, Grafana + Sentry
+Prometheus and Grafana
+This stack is ideal for metrics and visualizations in 2026, with custom dashboards for Node.js.
+
+Metric Collection: Use prom-client in Node.js for custom metrics (e.g., event loop lag); scrape with Prometheus.
+Dashboards: Import Node.js templates in Grafana; monitor traces and alerts.
+Alerting: Set rules for high CPU/memory; integrate with Discord notifications.
+Best Practices: Handle missing data; use retention policies for storage.
+
+Sentry (Recommended for Error Tracking)
+Sentry complements Prometheus/Grafana by focusing on errors and performance in 2026.
+
+Integration: Init Sentry SDK early; capture errors, traces, and performance.
+Context Enrichment: Add breadcrumbs/logs for debugging (e.g., user IDs).
+Alerts and Retros: Set up issue tracking; review trends regularly.
+Best for Your Stack: Use alongside Prometheus for full observability; it's still needed for detailed error insights.
+
+9. Testing: Jest
+Jest in 2026 remains the go-to for Node.js testing, with emphasis on coverage, isolation, and TDD.
+
+Structure Tests with AAA Pattern: Arrange, Act, Assert for clarity.
+Aim for High Coverage: Target 80%+; use --coverage flag.
+Mock Dependencies: Mock discord.js, Redis, etc., for isolation.
+Descriptive Names: Use clear test names; focus on edge cases.
+TDD Approach: Write tests first; integrate with CI.
+API Testing: Use Supertest for Express endpoints.
+Best Practices: Keep tests maintainable; run frequently.
