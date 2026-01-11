@@ -7,6 +7,8 @@ import type { Command, CommandContext } from '../../../infrastructure/discord/ty
 import { getDatabase } from '../../../infrastructure/database/connection.js';
 import { combatService } from '../../../domain/services/CombatService.js';
 import { Hero } from '../../../domain/entities/Hero.js';
+import { DailyQuestService } from '../../../domain/services/DailyQuestService.js';
+import { ActivityLogService } from '../../../domain/services/ActivityLogService.js';
 import type { Faction, TroopTier } from '../../../shared/types/index.js';
 import { MAP_SIZE } from '../../../shared/constants/game.js';
 
@@ -136,6 +138,19 @@ export const scoutCommand: Command = {
     }
 
     embed.setTimestamp().setFooter({ text: 'Scout reports show approximate enemy strength' });
+
+    // Update daily quest progress for scouting
+    await DailyQuestService.updateProgress(player.id, 'scout_location', 1);
+
+    // Log activity
+    await ActivityLogService.log(
+      player.id,
+      'scout',
+      `Scouted location (${targetX}, ${targetY})`,
+      undefined,
+      { targetLocation: { x: targetX, y: targetY } }
+    );
+
     await context.interaction.reply({ embeds: [embed] });
   },
 };

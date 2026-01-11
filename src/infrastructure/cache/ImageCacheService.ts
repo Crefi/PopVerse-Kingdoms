@@ -52,11 +52,14 @@ export class ImageCacheService {
   async getMapImage(playerId: string, options: MapRenderOptions): Promise<Buffer> {
     // Include terrain data in hash so cache invalidates when terrain changes
     const terrainHash = options.tiles.map(t => `${t.x},${t.y}:${t.terrain}:${t.npc_id || ''}:${t.occupant_id || ''}`).join('|');
+    // Include lands data in hash so cache invalidates when land ownership changes
+    const landsHash = (options.lands || []).map(l => `${l.minX},${l.minY}:${l.type}:${l.ownerType || ''}`).join('|');
     const hash = hashOptions({
       centerX: options.centerX,
       centerY: options.centerY,
       viewSize: options.viewSize,
       terrainHash,
+      landsHash,
     });
     const cacheKey = `img:map:${playerId}:${hash}`;
 

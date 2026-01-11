@@ -134,7 +134,7 @@ async function generateTestPlayers(): Promise<void> {
       level: 1 + Math.floor(Math.random() * 3),
     });
 
-    const factionEmoji = testPlayer.faction === 'cinema' ? '🔴' : testPlayer.faction === 'otaku' ? '🟢' : '🔵';
+    const factionEmoji = testPlayer.faction === 'cinema' ? '🎬' : testPlayer.faction === 'otaku' ? '⚔️' : '🎮';
     console.log(`  ✅ Created ${factionEmoji} ${testPlayer.username} at (${x}, ${y})`);
   }
 

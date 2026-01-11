@@ -19,9 +19,9 @@ const FACTION_COLORS: Record<string, number> = {
 };
 
 const FACTION_EMOJIS: Record<string, string> = {
-  cinema: '🔴',
-  otaku: '🟢',
-  arcade: '🔵',
+  cinema: '🎬',
+  otaku: '⚔️',
+  arcade: '🎮',
 };
 
 const ROLE_EMOJIS: Record<string, string> = {

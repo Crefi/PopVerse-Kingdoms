@@ -10,6 +10,7 @@ import { attackCommand } from './attack.js';
 import { scoutCommand } from './scout.js';
 import { heroesCommand } from './heroes.js';
 import { dailyCommand } from './daily.js';
+import { activityCommand } from './activity.js';
 import { tutorialCommand } from './tutorial.js';
 import { arenaCommand } from './arena.js';
 import { landCommand } from './land.js';
@@ -17,6 +18,8 @@ import { guildCommand } from './guild.js';
 import { rallyCommand } from './rally.js';
 import { guildquestsCommand } from './guildquests.js';
 import { researchCommand } from './research.js';
+import { shopCommand } from './shop.js';
+import { teleportCommand } from './teleport.js';
 
 export function loadCommands(): Command[] {
   return [
@@ -31,6 +34,7 @@ export function loadCommands(): Command[] {
     scoutCommand,
     heroesCommand,
     dailyCommand,
+    activityCommand,
     tutorialCommand,
     arenaCommand,
     landCommand,
@@ -38,5 +42,7 @@ export function loadCommands(): Command[] {
     rallyCommand,
     guildquestsCommand,
     researchCommand,
+    shopCommand,
+    teleportCommand,
   ];
 }

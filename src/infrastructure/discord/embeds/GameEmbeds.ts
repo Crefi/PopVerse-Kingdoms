@@ -9,9 +9,9 @@ const FACTION_COLORS: Record<Faction, ColorResolvable> = {
 };
 
 const FACTION_EMOJIS: Record<Faction, string> = {
-  cinema: '🔥',
-  otaku: '🌀',
-  arcade: '💎',
+  cinema: '🎬',
+  otaku: '⚔️',
+  arcade: '🎮',
 };
 
 const FACTION_NAMES: Record<Faction, string> = {
@@ -31,17 +31,17 @@ export class GameEmbeds {
       )
       .addFields(
         {
-          name: '🔥 CINEMA',
+          name: '🎬 CINEMA',
           value: '**Fire Element**\n+10% Attack Power\nAggressive Playstyle\n\n*Starter:* John McClane',
           inline: true,
         },
         {
-          name: '🌀 OTAKU',
+          name: '⚔️ OTAKU',
           value: '**Wind Element**\n+15% March Speed\nHit-and-Run Tactics\n\n*Starter:* Naruto Uzumaki',
           inline: true,
         },
         {
-          name: '💎 ARCADE',
+          name: '🎮 ARCADE',
           value: '**Water Element**\n+10% Defense\nTank Playstyle\n\n*Starter:* Mario',
           inline: true,
         }

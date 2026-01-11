@@ -2,6 +2,8 @@ import { SlashCommandBuilder, EmbedBuilder, type SlashCommandIntegerOption } fro
 import type { Command, CommandContext } from '../../../infrastructure/discord/types.js';
 import { getDatabase } from '../../../infrastructure/database/connection.js';
 import type { Resources, TroopTier } from '../../../shared/types/index.js';
+import { DailyQuestService } from '../../../domain/services/DailyQuestService.js';
+import { ActivityLogService } from '../../../domain/services/ActivityLogService.js';
 import type { Knex } from 'knex';
 
 // Troop configuration per tier
@@ -188,6 +190,18 @@ export const trainCommand: Command = {
         });
       }
     });
+
+    // Update daily quest progress for training troops
+    await DailyQuestService.updateProgress(player.id, 'train_troops', amount);
+
+    // Log activity
+    await ActivityLogService.log(
+      player.id,
+      'train_troops',
+      `Trained ${amount} T${tier} ${config.name}`,
+      { food: -totalCost.food, iron: -totalCost.iron },
+      { troopTier: tier, troopCount: amount }
+    );
 
     // Format time display
     const hours = Math.floor(totalTime / 3600);

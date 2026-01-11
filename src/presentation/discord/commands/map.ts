@@ -15,6 +15,7 @@ import type { Command, CommandContext } from '../../../infrastructure/discord/ty
 import { getDatabase } from '../../../infrastructure/database/connection.js';
 import { MAP_SIZE } from '../../../shared/constants/game.js';
 import { imageCacheService } from '../../../infrastructure/cache/ImageCacheService.js';
+import { DailyQuestService } from '../../../domain/services/DailyQuestService.js';
 import type { Faction } from '../../../shared/types/index.js';
 
 interface MapTileRow {
@@ -38,6 +39,18 @@ interface NPCRow {
   coord_x: number;
   coord_y: number;
   type: string;
+}
+
+interface LandRow {
+  id: string;
+  name: string;
+  type: string;
+  min_x: number;
+  min_y: number;
+  max_x: number;
+  max_y: number;
+  owner_player_id: string | null;
+  owner_guild_id: string | null;
 }
 
 export const mapCommand: Command = {
@@ -137,6 +150,10 @@ export const mapCommand: Command = {
     }
 
     const { embed, components, attachment } = await generateMapEmbed(db, player, centerX, centerY);
+
+    // Update daily quest progress for viewing map
+    await DailyQuestService.updateProgress(player.id, 'view_map', 1);
+
     await context.interaction.editReply({ embeds: [embed], components, files: attachment ? [attachment] : [] });
   },
 };
@@ -165,14 +182,23 @@ export async function generateMapEmbed(
   const occupantIds = tiles.filter((t) => t.occupant_id).map((t) => t.occupant_id as string);
   const npcIds = tiles.filter((t) => t.npc_id).map((t) => t.npc_id as string);
 
-  // Batch fetch occupants and NPCs in parallel
-  const [occupants, npcsInView] = await Promise.all([
+  // Batch fetch occupants, NPCs, and lands in parallel
+  const [occupants, npcsInView, landsInView] = await Promise.all([
     occupantIds.length > 0
       ? db('players').select('id', 'faction', 'username').whereIn('id', occupantIds) as Promise<PlayerRow[]>
       : Promise.resolve([] as PlayerRow[]),
     npcIds.length > 0
       ? db('npcs').select('id', 'name', 'power', 'coord_x', 'coord_y', 'type').whereIn('id', npcIds).orderBy('power', 'asc').limit(6) as Promise<NPCRow[]>
       : Promise.resolve([] as NPCRow[]),
+    // Fetch lands that overlap with the view area
+    db('land_parcels')
+      .select('id', 'name', 'type', 'min_x', 'min_y', 'max_x', 'max_y', 'owner_player_id', 'owner_guild_id')
+      .where(function() {
+        this.where('min_x', '<=', maxX)
+          .andWhere('max_x', '>=', minX)
+          .andWhere('min_y', '<=', maxY)
+          .andWhere('max_y', '>=', minY);
+      }) as Promise<LandRow[]>,
   ]);
 
   const occupantMap = new Map(occupants.map((o) => [o.id.toString(), o]));
@@ -186,12 +212,18 @@ export async function generateMapEmbed(
     npc_id: t.npc_id,
   }));
 
+  // Transform land data for renderer
+  const landData = landsInView.map((l) => ({
+    minX: l.min_x,
+    minY: l.min_y,
+    maxX: l.max_x,
+    maxY: l.max_y,
+    type: l.type,
+    ownerType: l.owner_player_id ? 'player' as const : l.owner_guild_id ? 'guild' as const : null,
+  }));
+
   let attachment: AttachmentBuilder | null = null;
   try {
-    console.log(`[MAP DEBUG] Rendering map for player ${player.id}, tiles: ${tileData.length}`);
-    console.log(`[MAP DEBUG] Tiles with NPCs: ${tileData.filter(t => t.npc_id).length}`);
-    console.log(`[MAP DEBUG] Tiles with terrain: ${JSON.stringify(tileData.reduce((acc, t) => { acc[t.terrain] = (acc[t.terrain] || 0) + 1; return acc; }, {} as Record<string, number>))}`);
-    
     const imageBuffer = await imageCacheService.getMapImage(player.id.toString(), {
       tiles: tileData,
       playerX: player.coord_x,
@@ -199,8 +231,8 @@ export async function generateMapEmbed(
       centerX,
       centerY,
       viewSize,
+      lands: landData,
     });
-    console.log(`[MAP DEBUG] Image buffer size: ${imageBuffer.length} bytes`);
     attachment = new AttachmentBuilder(imageBuffer, { name: 'map.png' });
   } catch (error) {
     console.error('Failed to render map image:', error);
@@ -231,7 +263,7 @@ export async function generateMapEmbed(
     for (const npc of limitedNpcs) {
       const dist = getDistance(npc.coord_x, npc.coord_y);
       const diff = npc.power < 1000 ? '🟢' : npc.power < 3000 ? '🟡' : '🔴';
-      recommendations.push(`👹 **${npc.name}** \`(${npc.coord_x},${npc.coord_y})\` ${diff} ${npc.power.toLocaleString()} pwr • ${dist} tiles`);
+      recommendations.push(`${diff} **${npc.name}** at \`${npc.coord_x},${npc.coord_y}\` — ${npc.power.toLocaleString()} pwr • ${dist} tiles`);
     }
   }
 
@@ -241,8 +273,8 @@ export async function generateMapEmbed(
       const tile = tiles.find((t) => t.occupant_id === p.id.toString());
       if (tile) {
         const dist = getDistance(tile.x, tile.y);
-        const factionEmoji = p.faction === 'cinema' ? '🔴' : p.faction === 'otaku' ? '🟢' : '🔵';
-        recommendations.push(`${factionEmoji} **${p.username}** \`(${tile.x},${tile.y})\` Player • ${dist} tiles`);
+        const factionEmoji = p.faction === 'cinema' ? '🎬' : p.faction === 'otaku' ? '⚔️' : '🎮';
+        recommendations.push(`${factionEmoji} **${p.username}** at \`${tile.x},${tile.y}\` — Player • ${dist} tiles`);
       }
     }
   }
@@ -251,7 +283,7 @@ export async function generateMapEmbed(
   if (resourceTiles.length > 0) {
     for (const tile of resourceTiles) {
       const dist = getDistance(tile.x, tile.y);
-      recommendations.push(`💎 **Gold Mine** \`(${tile.x},${tile.y})\` Resource • ${dist} tiles`);
+      recommendations.push(`💎 **Gold Mine** at \`${tile.x},${tile.y}\` — Resource • ${dist} tiles`);
     }
   }
 
@@ -261,12 +293,12 @@ export async function generateMapEmbed(
     .addFields(
       {
         name: '📍 Position',
-        value: `🏰 Home: \`(${player.coord_x}, ${player.coord_y})\`\n🔭 View: \`(${centerX}, ${centerY})\``,
+        value: `🏰 Home: \`${player.coord_x}, ${player.coord_y}\`\n🔭 View: \`${centerX}, ${centerY}\``,
         inline: true,
       },
       {
         name: '📖 Legend',
-        value: '🏰 Your HQ\n👹 Monster\n🔴🟢🔵 Players',
+        value: '🏰 Your HQ\n👹 Monster\n🎬⚔️🎮 Players',
         inline: true,
       }
     );
@@ -336,7 +368,7 @@ export async function generateMapEmbed(
         label: `${p.username} (${tile.x},${tile.y})`,
         description: `${p.faction} player • ${getDistance(tile.x, tile.y)} tiles`,
         value: `${tile.x}:${tile.y}`,
-        emoji: p.faction === 'cinema' ? '🔴' : p.faction === 'otaku' ? '🟢' : '🔵',
+        emoji: p.faction === 'cinema' ? '🎬' : p.faction === 'otaku' ? '⚔️' : '🎮',
       });
     }
   }

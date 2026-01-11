@@ -12,6 +12,8 @@ import type { Command, CommandContext } from '../../../infrastructure/discord/ty
 import { getDatabase } from '../../../infrastructure/database/connection.js';
 import { combatService, type CombatContext } from '../../../domain/services/CombatService.js';
 import { npcService, type NpcType, NPC_TYPES } from '../../../domain/services/NpcService.js';
+import { DailyQuestService } from '../../../domain/services/DailyQuestService.js';
+import { ActivityLogService } from '../../../domain/services/ActivityLogService.js';
 import { Hero } from '../../../domain/entities/Hero.js';
 import type { Faction, TroopTier, Resources, Element, HeroRarity } from '../../../shared/types/index.js';
 import { MAP_SIZE } from '../../../shared/constants/game.js';
@@ -538,6 +540,9 @@ async function executeAttack(
     if (defender.npcId && defender.npcType && result.winner === 'attacker') {
       await npcService.defeatNpc(defender.npcId.toString());
 
+      // Update daily quest progress for defeating NPC
+      await DailyQuestService.updateProgress(parseInt(attacker.id), 'attack_npc', 1);
+
       // Check for hero shard drop
       const dropChance = HERO_SHARD_DROP_CHANCE[defender.npcType];
       if (Math.random() < dropChance) {
@@ -702,5 +707,26 @@ async function executeAttack(
   }
 
   embed.setTimestamp();
+
+  // Log activity
+  const actionType = defender.npcId ? 'attack_npc' : 'attack_player';
+  const resourcesGained = isVictory ? {
+    food: result.loot.food,
+    iron: result.loot.iron,
+    gold: result.loot.gold,
+  } : undefined;
+
+  await ActivityLogService.log(
+    parseInt(attacker.id),
+    actionType,
+    `${isVictory ? 'Defeated' : 'Lost to'} ${defender.name} at (${targetX}, ${targetY})`,
+    resourcesGained,
+    {
+      targetName: defender.name,
+      targetLocation: { x: targetX, y: targetY },
+      won: isVictory,
+    }
+  );
+
   await interaction.editReply({ embeds: [embed], components: [] });
 }

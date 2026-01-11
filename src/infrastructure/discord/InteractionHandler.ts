@@ -6,6 +6,8 @@ import { handleArenaButton, handleArenaSelectMenu } from '../../presentation/dis
 import { handleGuildButton } from '../../presentation/discord/commands/guild.js';
 import { handleRallyButton } from '../../presentation/discord/commands/rally.js';
 import { handleGuildQuestButton } from '../../presentation/discord/commands/guildquests.js';
+import { handleLandButton } from '../../presentation/discord/commands/land.js';
+import { handleTeleportButton } from '../../presentation/discord/commands/teleport.js';
 import logger from '../../shared/utils/logger.js';
 
 export class InteractionHandler {
@@ -135,6 +137,18 @@ export class InteractionHandler {
         // Guild quest buttons (claim)
         if (params.length >= 1) {
           await handleGuildQuestButton(interaction, params[0], params.slice(1));
+        }
+        return;
+      case 'land':
+        // Land buttons (list pagination, filter, view, quickbuy)
+        if (params.length >= 1) {
+          await handleLandButton(interaction, params[0], params.slice(1));
+        }
+        return;
+      case 'teleport':
+        // Teleport confirmation buttons
+        if (params.length >= 1) {
+          await handleTeleportButton(interaction, params[0], params.slice(1));
         }
         return;
       default:

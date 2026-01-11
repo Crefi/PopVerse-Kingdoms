@@ -8,6 +8,7 @@ import {
 } from 'discord.js';
 import type { Command, CommandContext } from '../../../infrastructure/discord/types.js';
 import { getDatabase } from '../../../infrastructure/database/connection.js';
+import { ActivityLogService } from '../../../domain/services/ActivityLogService.js';
 import {
   DAILY_FOOD_REWARD,
   DAILY_IRON_REWARD,
@@ -257,6 +258,14 @@ export const dailyCommand: Command = {
           )
           .setTimestamp();
 
+        // Log activity
+        await ActivityLogService.log(
+          player.id,
+          'daily_reward',
+          `Claimed daily login reward (Day ${streakDay + 1})`,
+          { food: rewardFood, iron: rewardIron, gold: rewardGold, diamonds: rewardDiamonds }
+        );
+
         await context.interaction.editReply({ embeds: [successEmbed], components: [] });
       } else if (buttonInteraction.customId === 'daily:claim_quests') {
         // Claim all completed quests
@@ -288,6 +297,14 @@ export const dailyCommand: Command = {
           .setColor('#00FF00')
           .setDescription(`You received **${totalReward} Diamonds** 💎 from ${completedQuests.length} quest(s)!`)
           .setTimestamp();
+
+        // Log activity
+        await ActivityLogService.log(
+          player.id,
+          'quest_reward',
+          `Claimed ${completedQuests.length} daily quest reward(s)`,
+          { diamonds: totalReward }
+        );
 
         await context.interaction.editReply({ embeds: [successEmbed], components: [] });
       }

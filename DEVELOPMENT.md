@@ -176,6 +176,18 @@ npx tsx scripts/reset-dev.ts
 
 # Setup a test user with max everything (resources, heroes, buildings, etc.)
 npx tsx scripts/setup-test-user.ts YOUR_DISCORD_ID
+
+# Check map data status (terrain distribution, NPCs, etc.)
+npx tsx scripts/check-map-data.ts
+
+# Regenerate map with terrain and NPCs (preserves player positions)
+npx tsx scripts/regenerate-map.ts
+
+# Respawn NPCs only (without regenerating terrain)
+npx tsx scripts/respawn-npcs.ts
+
+# Clear Redis cache (map images, etc.)
+npx tsx scripts/clear-cache.ts
 ```
 
 ### Clear Old Discord Commands
@@ -245,6 +257,31 @@ docker exec -it popverse_redis_dev redis-cli ping
 # Clear Redis cache
 docker exec -it popverse_redis_dev redis-cli FLUSHALL
 ```
+
+### Map Not Showing Terrain/NPCs/Resources (Plain Green Tiles)
+**Cause:** Map data in database is missing or corrupted. The map only has plain tiles without terrain variety, NPCs, or resources.
+
+**Diagnosis:**
+```bash
+# Check map data status
+npx tsx scripts/check-map-data.ts
+```
+
+If you see only "plains" terrain or "Tiles with NPCs: 0", the map needs regeneration.
+
+**Solution:**
+```bash
+# 1. Regenerate the map (preserves player positions)
+npx tsx scripts/regenerate-map.ts
+
+# 2. Clear the image cache
+npx tsx scripts/clear-cache.ts
+
+# 3. Restart the bot
+npm run dev
+```
+
+After running `/map`, you should see varied terrain (forests, mountains, lakes, gold mines) and NPCs (monsters).
 
 ### TypeScript Compilation Errors
 ```bash

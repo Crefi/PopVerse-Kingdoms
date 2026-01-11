@@ -12,6 +12,80 @@ export const PROTECTION_SHIELD_HOURS = 24;
 export const MAX_LANDS_PER_PLAYER = 3;
 export const MAX_LANDS_PER_GUILD = 10;
 
+// Building slots based on HQ level
+export const BUILDING_SLOTS_BY_HQ: Record<number, number> = {
+  1: 1,   // HQ 1-4: 1 slot
+  5: 2,   // HQ 5-9: 2 slots
+  10: 3,  // HQ 10-14: 3 slots
+  15: 4,  // HQ 15-19: 4 slots
+  20: 5,  // HQ 20+: 5 slots
+};
+
+// Get building slots for a given HQ level
+export function getBuildingSlots(hqLevel: number): number {
+  const thresholds = Object.keys(BUILDING_SLOTS_BY_HQ)
+    .map(Number)
+    .sort((a, b) => b - a);
+  
+  for (const threshold of thresholds) {
+    if (hqLevel >= threshold) {
+      return BUILDING_SLOTS_BY_HQ[threshold];
+    }
+  }
+  return 1;
+}
+
+// Shop constants
+export const SHOP_ITEMS = {
+  teleport_scroll: {
+    id: 'teleport_scroll',
+    name: 'Teleport Scroll',
+    emoji: '📜',
+    description: 'Instantly relocate your city to any valid tile',
+    diamondCost: 100,
+    goldCost: 0,
+    maxDaily: 3,
+  },
+  resource_boost: {
+    id: 'resource_boost',
+    name: 'Resource Boost (1h)',
+    emoji: '⚡',
+    description: '+50% resource production for 1 hour',
+    diamondCost: 50,
+    goldCost: 0,
+    maxDaily: 5,
+  },
+  shield_8h: {
+    id: 'shield_8h',
+    name: 'Peace Shield (8h)',
+    emoji: '🛡️',
+    description: 'Protect your city from attacks for 8 hours',
+    diamondCost: 150,
+    goldCost: 0,
+    maxDaily: 2,
+  },
+  speed_up_1h: {
+    id: 'speed_up_1h',
+    name: 'Speed Up (1h)',
+    emoji: '⏩',
+    description: 'Reduce building/research time by 1 hour',
+    diamondCost: 30,
+    goldCost: 0,
+    maxDaily: 10,
+  },
+  troop_heal: {
+    id: 'troop_heal',
+    name: 'Healing Salve',
+    emoji: '💊',
+    description: 'Instantly heal all wounded troops',
+    diamondCost: 0,
+    goldCost: 5000,
+    maxDaily: 3,
+  },
+} as const;
+
+export type ShopItemId = keyof typeof SHOP_ITEMS;
+
 // Combat constants
 export const ELEMENTAL_DAMAGE_BONUS = 0.25;
 export const CRITICAL_HIT_CHANCE = 0.1;

@@ -2,7 +2,9 @@ import { SlashCommandBuilder, EmbedBuilder, type SlashCommandStringOption } from
 import type { Command, CommandContext } from '../../../infrastructure/discord/types.js';
 import { getDatabase } from '../../../infrastructure/database/connection.js';
 import type { BuildingType, Resources } from '../../../shared/types/index.js';
-import { MAX_HQ_LEVEL } from '../../../shared/constants/game.js';
+import { MAX_HQ_LEVEL, getBuildingSlots } from '../../../shared/constants/game.js';
+import { DailyQuestService } from '../../../domain/services/DailyQuestService.js';
+import { ActivityLogService } from '../../../domain/services/ActivityLogService.js';
 import type { Knex } from 'knex';
 
 interface BuildingRow {
@@ -140,15 +142,25 @@ export const buildCommand: Command = {
     const hq = buildingMap.get('hq');
     const hqLevel = hq?.level ?? 1;
 
-    // Check if any building is currently upgrading
-    const upgradingBuilding = buildings.find((b) => 
+    // Get available building slots based on HQ level
+    const maxSlots = getBuildingSlots(hqLevel);
+    
+    // Count currently upgrading buildings
+    const upgradingBuildings = buildings.filter((b) => 
       b.upgrade_completes_at && new Date(b.upgrade_completes_at) > new Date()
     );
 
-    if (upgradingBuilding && upgradingBuilding.upgrade_completes_at) {
-      const completeTime = new Date(upgradingBuilding.upgrade_completes_at);
+    if (upgradingBuildings.length >= maxSlots) {
+      const nextSlotHq = hqLevel < 5 ? 5 : hqLevel < 10 ? 10 : hqLevel < 15 ? 15 : hqLevel < 20 ? 20 : null;
+      const slotHint = nextSlotHq ? `\n💡 Upgrade HQ to level ${nextSlotHq} for an extra slot!` : '';
+      
+      const upgradingList = upgradingBuildings.map(b => {
+        const completeTime = new Date(b.upgrade_completes_at!);
+        return `• **${formatBuildingName(b.type)}** - <t:${Math.floor(completeTime.getTime() / 1000)}:R>`;
+      }).join('\n');
+
       await context.interaction.reply({
-        content: `⏳ You already have a building upgrading!\n**${formatBuildingName(upgradingBuilding.type)}** completes <t:${Math.floor(completeTime.getTime() / 1000)}:R>`,
+        content: `⏳ All ${maxSlots} building slot${maxSlots > 1 ? 's' : ''} are in use!\n\n**Currently upgrading:**\n${upgradingList}${slotHint}`,
         ephemeral: true,
       });
       return;
@@ -235,7 +247,20 @@ export const buildCommand: Command = {
       }
     });
 
+    // Update daily quest progress for building upgrade
+    await DailyQuestService.updateProgress(player.id, 'build_upgrade', 1);
+
+    // Log activity
+    await ActivityLogService.log(
+      player.id,
+      'build_upgrade',
+      `Upgraded ${formatBuildingName(buildingType)} to level ${nextLevel}`,
+      { food: -cost.food, iron: -cost.iron, gold: -cost.gold },
+      { buildingType, buildingLevel: nextLevel }
+    );
+
     // Create success embed
+    const slotsUsed = upgradingBuildings.length + 1;
     const embed = new EmbedBuilder()
       .setTitle(`🏗️ ${currentLevel === 0 ? 'Building' : 'Upgrading'} ${formatBuildingName(buildingType)}`)
       .setDescription(config.description)
@@ -243,6 +268,7 @@ export const buildCommand: Command = {
       .addFields(
         { name: '📊 Level', value: `${currentLevel} → **${nextLevel}**`, inline: true },
         { name: '⏱️ Completes', value: `<t:${Math.floor(completesAt.getTime() / 1000)}:R>`, inline: true },
+        { name: '🔧 Slots', value: `${slotsUsed}/${maxSlots} in use`, inline: true },
         { name: '💰 Cost', value: `🌾 ${cost.food.toLocaleString()}\n⚒️ ${cost.iron.toLocaleString()}\n💰 ${cost.gold.toLocaleString()}`, inline: true }
       )
       .setFooter({ text: 'Guild members can help speed up construction!' })

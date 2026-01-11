@@ -304,7 +304,7 @@ async function handleLeaderboard(context: CommandContext): Promise<void> {
   const leaderboardText = leaderboard.map((entry, idx) => {
     const tierInfo = arenaService.getTierInfo(entry.tier);
     const medal = idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : `${idx + 1}.`;
-    const factionEmoji = entry.faction === 'cinema' ? '🔴' : entry.faction === 'otaku' ? '🟢' : '🔵';
+    const factionEmoji = entry.faction === 'cinema' ? '🎬' : entry.faction === 'otaku' ? '⚔️' : '🎮';
     
     return `${medal} ${factionEmoji} **${entry.username}** - ${tierInfo.emoji} ${entry.rating.toLocaleString()} pts`;
   }).join('\n');
@@ -340,7 +340,7 @@ async function handleDefenseLog(
   } else {
     const logText = defenseLog.map(entry => {
       const resultEmoji = entry.result === 'win' ? '✅' : '❌';
-      const factionEmoji = entry.attackerFaction === 'cinema' ? '🔴' : entry.attackerFaction === 'otaku' ? '🟢' : '🔵';
+      const factionEmoji = entry.attackerFaction === 'cinema' ? '🎬' : entry.attackerFaction === 'otaku' ? '⚔️' : '🎮';
       const timeAgo = getTimeAgo(entry.timestamp);
       const ratingText = entry.result === 'win' ? `+${entry.ratingChange}` : '';
       

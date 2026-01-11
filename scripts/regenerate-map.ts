@@ -155,6 +155,7 @@ async function regenerateMap() {
   console.log('Clearing existing map data...');
   await db('map_tiles').del();
   await db('npcs').del();
+  await db('land_parcels').del();
 
   const tiles: TileData[] = [];
   const npcs: NPCData[] = [];
@@ -239,7 +240,151 @@ async function regenerateMap() {
   console.log('');
   console.log('👤 Player positions preserved:', playerPositions.size);
 
+  // Generate land parcels
+  console.log('\n🏞️ Generating land parcels...');
+  const landParcels = await generateLandParcels();
+  console.log('');
+  console.log('🏞️ Land Parcels:');
+  console.log(`   🌾 Farms:     ${landParcels.farm || 0}`);
+  console.log(`   ⛏️ Mines:     ${landParcels.mine || 0}`);
+  console.log(`   💰 Gold Mines: ${landParcels.goldmine || 0}`);
+  console.log(`   🏰 Forts:     ${landParcels.fort || 0}`);
+  console.log(`   Total Lands: ${Object.values(landParcels).reduce((a, b) => a + b, 0)}`);
+
   await db.destroy();
+}
+
+/**
+ * Generate land parcels across the map, avoiding mountains and water
+ */
+async function generateLandParcels(): Promise<Record<string, number>> {
+  const LAND_TYPES = ['farm', 'mine', 'goldmine', 'fort'] as const;
+  
+  const LAND_CONFIG = {
+    farm: { count: 12, minSize: 3, maxSize: 5, baseCost: 500, name: 'Fertile Farm' },
+    mine: { count: 10, minSize: 3, maxSize: 4, baseCost: 600, name: 'Iron Mine' },
+    goldmine: { count: 6, minSize: 2, maxSize: 3, baseCost: 1000, name: 'Gold Vein' },
+    fort: { count: 8, minSize: 3, maxSize: 4, baseCost: 800, name: 'Strategic Fort' },
+  };
+
+  const LAND_BONUSES = {
+    farm: { food: 0.15 },
+    mine: { iron: 0.15 },
+    goldmine: { gold: 0.20 },
+    fort: { defense: 0.10 },
+  };
+
+  // Blocked terrain types that lands should avoid
+  const BLOCKED_TERRAIN = ['mountain', 'lake'];
+
+  interface LandParcelData {
+    name: string;
+    type: string;
+    min_x: number;
+    min_y: number;
+    max_x: number;
+    max_y: number;
+    bonuses: string;
+    purchase_cost: number;
+  }
+
+  // Get all tiles to check terrain
+  const allTiles = await db('map_tiles').select('x', 'y', 'terrain') as { x: number; y: number; terrain: string }[];
+  const terrainMap = new Map<string, string>();
+  for (const tile of allTiles) {
+    terrainMap.set(`${tile.x},${tile.y}`, tile.terrain);
+  }
+
+  const parcels: LandParcelData[] = [];
+  const occupiedAreas: { minX: number; minY: number; maxX: number; maxY: number }[] = [];
+  const counts: Record<string, number> = { farm: 0, mine: 0, goldmine: 0, fort: 0 };
+
+  // Check if an area overlaps with existing parcels
+  const isAreaFree = (minX: number, minY: number, maxX: number, maxY: number): boolean => {
+    for (const area of occupiedAreas) {
+      if (!(maxX < area.minX || minX > area.maxX || maxY < area.minY || minY > area.maxY)) {
+        return false;
+      }
+    }
+    return true;
+  };
+
+  // Check if area contains any blocked terrain (mountains, lakes)
+  const hasBlockedTerrain = (minX: number, minY: number, maxX: number, maxY: number): boolean => {
+    for (let y = minY; y <= maxY; y++) {
+      for (let x = minX; x <= maxX; x++) {
+        const terrain = terrainMap.get(`${x},${y}`);
+        if (terrain && BLOCKED_TERRAIN.includes(terrain)) {
+          return true;
+        }
+      }
+    }
+    return false;
+  };
+
+  // Seeded random for consistent generation
+  let seed = 42;
+  const landSeededRandom = (): number => {
+    seed = (seed * 1103515245 + 12345) % 2147483647;
+    return seed / 2147483647;
+  };
+
+  // Generate parcels for each type
+  for (const type of LAND_TYPES) {
+    const config = LAND_CONFIG[type];
+    let attempts = 0;
+    const maxAttempts = 300; // Increased attempts since we're avoiding terrain
+
+    while (counts[type] < config.count && attempts < maxAttempts) {
+      attempts++;
+
+      // Random size
+      const sizeX = Math.floor(landSeededRandom() * (config.maxSize - config.minSize + 1)) + config.minSize;
+      const sizeY = Math.floor(landSeededRandom() * (config.maxSize - config.minSize + 1)) + config.minSize;
+
+      // Random position (avoid edges)
+      const minX = Math.floor(landSeededRandom() * (MAP_SIZE - sizeX - 10)) + 5;
+      const minY = Math.floor(landSeededRandom() * (MAP_SIZE - sizeY - 10)) + 5;
+      const maxX = minX + sizeX - 1;
+      const maxY = minY + sizeY - 1;
+
+      // Check if area is free (with 2-tile buffer) and has no blocked terrain
+      if (isAreaFree(minX - 2, minY - 2, maxX + 2, maxY + 2) && !hasBlockedTerrain(minX, minY, maxX, maxY)) {
+        const cost = Math.floor(config.baseCost * (sizeX * sizeY) / 9); // Normalize to 3x3
+        
+        parcels.push({
+          name: `${config.name} #${counts[type] + 1}`,
+          type,
+          min_x: minX,
+          min_y: minY,
+          max_x: maxX,
+          max_y: maxY,
+          bonuses: JSON.stringify(LAND_BONUSES[type]),
+          purchase_cost: cost,
+        });
+
+        occupiedAreas.push({ minX, minY, maxX, maxY });
+        counts[type]++;
+      }
+    }
+  }
+
+  // Insert all parcels
+  if (parcels.length > 0) {
+    const inserted = await db('land_parcels').insert(parcels).returning(['id', 'min_x', 'min_y', 'max_x', 'max_y']);
+    
+    // Update map_tiles with land_parcel_id references
+    for (const parcel of inserted) {
+      await db('map_tiles')
+        .where('x', '>=', parcel.min_x)
+        .where('x', '<=', parcel.max_x)
+        .where('y', '>=', parcel.min_y)
+        .where('y', '<=', parcel.max_y)
+        .update({ land_parcel_id: parcel.id });
+    }
+  }
+
+  return counts;
 }
 
 regenerateMap().catch(console.error);

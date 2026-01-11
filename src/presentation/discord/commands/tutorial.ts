@@ -186,6 +186,16 @@ export const tutorialCommand: Command = {
         return;
       }
 
+      if (action === 'refresh') {
+        // Just rebuild the embed with fresh data
+        const { embed: newEmbed, buttons: newButtons } = await buildTutorialEmbed(db, player.id, currentStep, totalSteps, progress);
+        await context.interaction.editReply({
+          embeds: [newEmbed],
+          components: [newButtons],
+        });
+        return;
+      }
+
       if (action === 'claim') {
         // Claim reward for current step
         const step = tutorialService.getStep(stepNum);
@@ -402,6 +412,14 @@ async function buildTutorialEmbed(
         .setStyle(ButtonStyle.Secondary)
     );
   }
+
+  // Refresh button - always show to re-check requirements
+  row.addComponents(
+    new ButtonBuilder()
+      .setCustomId(`tutorial:refresh:${currentStep}`)
+      .setEmoji('🔄')
+      .setStyle(ButtonStyle.Secondary)
+  );
 
   // Claim reward button - only show if has reward, not claimed, AND requirement met
   if (hasReward && !rewardClaimed && requirementMet) {
