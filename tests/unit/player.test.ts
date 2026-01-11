@@ -44,17 +44,17 @@ describe('Player Entity', () => {
       const player = Player.create(BigInt(1), 'Test', 'cinema', { x: 0, y: 0 });
 
       expect(player.hasResources({ food: 500 })).toBe(true);
-      expect(player.hasResources({ food: 2000 })).toBe(false);
-      expect(player.hasResources({ food: 500, iron: 500, gold: 200 })).toBe(true);
+      expect(player.hasResources({ food: 10000 })).toBe(false);
+      expect(player.hasResources({ food: 5000, iron: 2500, gold: 1000 })).toBe(true);
     });
 
     it('should add resources correctly', () => {
       const player = Player.create(BigInt(1), 'Test', 'cinema', { x: 0, y: 0 });
       player.addResources({ food: 500, iron: 200 });
 
-      expect(player.resources.food).toBe(1500);
-      expect(player.resources.iron).toBe(700);
-      expect(player.resources.gold).toBe(200);
+      expect(player.resources.food).toBe(5500);
+      expect(player.resources.iron).toBe(2700);
+      expect(player.resources.gold).toBe(1000);
     });
 
     it('should deduct resources correctly', () => {
@@ -62,16 +62,16 @@ describe('Player Entity', () => {
       const result = player.deductResources({ food: 500, iron: 200 });
 
       expect(result).toBe(true);
-      expect(player.resources.food).toBe(500);
-      expect(player.resources.iron).toBe(300);
+      expect(player.resources.food).toBe(4500);
+      expect(player.resources.iron).toBe(2300);
     });
 
     it('should not deduct resources if insufficient', () => {
       const player = Player.create(BigInt(1), 'Test', 'cinema', { x: 0, y: 0 });
-      const result = player.deductResources({ food: 2000 });
+      const result = player.deductResources({ food: 10000 });
 
       expect(result).toBe(false);
-      expect(player.resources.food).toBe(1000); // Unchanged
+      expect(player.resources.food).toBe(5000); // Unchanged
     });
   });
 
@@ -80,7 +80,7 @@ describe('Player Entity', () => {
       const player = Player.create(BigInt(1), 'Test', 'cinema', { x: 0, y: 0 });
       player.addDiamonds(50);
 
-      expect(player.diamonds).toBe(150);
+      expect(player.diamonds).toBe(550);
     });
 
     it('should deduct diamonds correctly', () => {
@@ -88,15 +88,15 @@ describe('Player Entity', () => {
       const result = player.deductDiamonds(50);
 
       expect(result).toBe(true);
-      expect(player.diamonds).toBe(50);
+      expect(player.diamonds).toBe(450);
     });
 
     it('should not deduct diamonds if insufficient', () => {
       const player = Player.create(BigInt(1), 'Test', 'cinema', { x: 0, y: 0 });
-      const result = player.deductDiamonds(200);
+      const result = player.deductDiamonds(600);
 
       expect(result).toBe(false);
-      expect(player.diamonds).toBe(100); // Unchanged
+      expect(player.diamonds).toBe(500); // Unchanged
     });
   });
 

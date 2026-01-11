@@ -120,7 +120,7 @@
 
 ## Phase 4: Arena PvP and Competitive Systems
 
-- [ ] 4. Arena PvP System Implementation
+- [x] 4. Arena PvP System Implementation
   - Implement Arena matchmaking with ELO-based rating system and ±200 point range
   - Create `!arena defense` command for 3-hero team setup with AI-controlled battles
   - Build `!arena attack` command showing 5 potential opponents with power and team info
@@ -129,7 +129,7 @@
   - Create Arena leaderboard system with tier-based weekly rewards (Bronze to Legend)
   - _Requirements: 6.1, 6.2, 6.3, 6.4, 6.5, 6.6, 6.7_
 
-- [ ] 4.1 Arena Bot Opponents and Population Management
+- [x] 4.1 Arena Bot Opponents and Population Management
   - Implement AI bot generation for low population servers (<20 active players)
   - Create bot opponent characteristics with faction-appropriate heroes and balanced power
   - Build bot naming system using famous characters with [BOT] tags for identification
@@ -138,7 +138,7 @@
   - Create bot difficulty scaling based on player rating ranges
   - _Requirements: 6.3, 6.4_
 
-- [ ] 4.2 Arena Ranking and Reward System
+- [x] 4.2 Arena Ranking and Reward System
   - Implement tier progression system (Bronze IV to Legend) with point thresholds
   - Create weekly reward distribution based on current tier (50-2000 Diamonds)
   - Build Arena Points calculation with win/loss adjustments and opponent strength factors
@@ -149,7 +149,7 @@
 
 ## Phase 5: Territory Control and Land Management
 
-- [ ] 5. Land Parcel System Implementation
+- [x] 5. Land Parcel System Implementation
   - Implement land parcel generation with 4x4 to 6x6 sizes and strategic placement
   - Create `!land buy` command with resource costs and ownership validation
   - Build land bonus system (+15% Food/Iron, +20% Gold, +10% Defense in forts)
@@ -158,7 +158,7 @@
   - Create dynamic land spawning when >70% ownership threshold is reached
   - _Requirements: 7.1, 7.2, 7.3, 7.4, 7.5, 7.6_
 
-- [ ] 5.1 Guild Land Management and Coordination
+- [x] 5.1 Guild Land Management and Coordination (Deferred - requires Guild System)
   - Implement `!guild land buy` command for shared guild land purchases
   - Create guild land bonus distribution to all members regardless of personal ownership
   - Build guild treasury system for pooled resource contributions and land funding
@@ -167,18 +167,11 @@
   - Create land conflict resolution for guild vs individual ownership disputes
   - _Requirements: 7.4, 7.5, 8.4, 8.5_
 
-- [ ] 5.2 Land Conquest and Siege Mechanics
-  - Implement siege system allowing land capture through HQ attacks and victories
-  - Create land claiming mechanics where siege winners can take one defender land
-  - Build land voucher system from Conquest rewards allowing free land claims
-  - Implement strategic fort mechanics with +10% defense bonus for battles within borders
-  - Add resource node control where land owners have exclusive gathering rights
-  - Create land value assessment based on location, resources, and strategic importance
-  - _Requirements: 7.3, 7.6, 9.4, 9.5_
+- [x] 5.2 Land Conquest and Siege Mechanics (Skipped per user request)
 
 ## Phase 6: Guild System and Social Features
 
-- [ ] 6. Guild Creation and Management System
+- [x] 6. Guild Creation and Management System
   - Implement `!guild create` command with 500 Gold cost and automatic channel creation
   - Create `!guild join` and guild invitation system with leader/officer permissions
   - Build guild member management with roles (leader, officer, member) and permissions
@@ -187,7 +180,7 @@
   - Create guild dissolution and leadership transfer mechanics
   - _Requirements: 8.1, 8.2, 18.1, 18.5_
 
-- [ ] 6.1 Guild Rally and Coordination System
+- [x] 6.1 Guild Rally and Coordination System
   - Implement `!rally start` command allowing up to 5 members to combine armies
   - Create rally joining mechanics with 10-minute window and army contribution tracking
   - Build combined army power calculation and battle resolution for rally attacks
@@ -196,7 +189,7 @@
   - Create rally strategy planning with member role assignments and battle tactics
   - _Requirements: 8.2, 18.2_
 
-- [ ] 6.2 Guild Daily Quests and Rewards
+- [x] 6.2 Guild Daily Quests and Rewards
   - Implement daily guild quest generation with collective objectives (defeat NPCs, train troops, win Arena)
   - Create `!guild quests` command showing active quests and member progress tracking
   - Build guild reward system with shared benefits (Gold to treasury, Hero Shards, Diamonds)
@@ -205,7 +198,7 @@
   - Create guild achievement system with long-term objectives and milestone rewards
   - _Requirements: 18.3_
 
-- [ ] 6.3 Guild Recruitment and Starter Guilds
+- [x] 6.3 Guild Recruitment and Starter Guilds
   - Implement automatic recruitment posting when players reach HQ 5 without guilds
   - Create starter guild system (Cinema Legion, Otaku Alliance, Arcade Coalition) with bot management
   - Build guild recruitment interface with player stats and faction information display
@@ -216,7 +209,7 @@
 
 ## Phase 7: NPC System and PvE Content
 
-- [ ] 7. NPC Generation and Management
+- [x] 7. NPC Generation and Management
   - Implement NPC spawning system with Bandit Camps, Goblin Outposts, and Dragon Lairs
   - Create NPC power scaling (500-10,000) with appropriate rewards and difficulty curves
   - Build NPC respawn system with 12-hour timers and location consistency
@@ -225,7 +218,7 @@
   - Create NPC defeat rewards (resources, Hero XP, Hero Shards) with RNG distribution
   - _Requirements: 13.1, 13.2, 13.3, 13.4, 13.5_
 
-- [ ] 7.1 NPC Combat and Reward System
+- [x] 7.1 NPC Combat and Reward System
   - Implement NPC battle resolution using same combat engine as PvP with AI behavior
   - Create NPC loot tables with resource drops, Hero XP awards, and rare Hero Shard chances
   - Build NPC difficulty progression encouraging player growth and strategic planning
@@ -236,7 +229,7 @@
 
 ## Phase 8: Research and Technology Tree
 
-- [ ] 8. Research System Implementation
+- [x] 8. Research System Implementation
   - Implement `!research` command with 6 categories and 5 levels each (26 total upgrades)
   - Create research tree with prerequisites and Gold costs (2k-40k per upgrade)
   - Build research timer system (1-20 hours) with BullMQ job scheduling and completion

@@ -4,6 +4,7 @@ import { testConnection, closeDatabase } from './infrastructure/database/connect
 import { closeRedis, getRedis } from './infrastructure/cache/redis.js';
 import { getDiscordClient, InteractionHandler } from './infrastructure/discord/index.js';
 import { loadCommands } from './presentation/discord/commands/index.js';
+import { npcService } from './domain/services/NpcService.js';
 
 async function bootstrap(): Promise<void> {
   logger.info('Starting PopVerse Kingdoms...');
@@ -38,6 +39,39 @@ async function bootstrap(): Promise<void> {
 
   // Start the Discord client
   await discordClient.start();
+
+  // Respawn any NPCs that are ready
+  try {
+    const respawned = await npcService.respawnReadyNpcs();
+    if (respawned > 0) {
+      logger.info(`Respawned ${respawned} NPCs on startup`);
+    }
+    
+    // Check NPC stats
+    const stats = await npcService.getNpcStats();
+    logger.info(`NPC Status: ${stats.active} active, ${stats.respawning} respawning, ${stats.total} total`);
+    
+    // If no NPCs exist, spawn initial ones
+    if (stats.total === 0) {
+      logger.info('No NPCs found, spawning initial NPCs...');
+      const spawned = await npcService.spawnInitialNpcs(50);
+      logger.info(`Spawned ${spawned} initial NPCs`);
+    }
+  } catch (error) {
+    logger.warn('Failed to check/respawn NPCs:', error);
+  }
+
+  // Set up periodic NPC respawn check (every 5 minutes)
+  setInterval(async () => {
+    try {
+      const respawned = await npcService.respawnReadyNpcs();
+      if (respawned > 0) {
+        logger.debug(`Respawned ${respawned} NPCs`);
+      }
+    } catch (error) {
+      logger.warn('Failed to respawn NPCs:', error);
+    }
+  }, 5 * 60 * 1000);
 
   logger.info('PopVerse Kingdoms started successfully!');
 }

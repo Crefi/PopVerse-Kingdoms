@@ -282,13 +282,14 @@ export class CombatService {
     return {
       playerId,
       hero,
-      troops,
+      troops: Array.isArray(troops) ? troops : [],
       factionBonus: FACTION_BONUSES[faction],
     };
   }
 
   private calculateArmyPower(army: Army, terrainBonus: number): number {
-    const troopPower = army.troops.reduce((sum: number, t: TroopCount) => sum + t.count * TROOP_POWER[t.tier], 0);
+    const troopsArray = Array.isArray(army.troops) ? army.troops : [];
+    const troopPower = troopsArray.reduce((sum: number, t: TroopCount) => sum + t.count * TROOP_POWER[t.tier], 0);
     const heroPower = army.hero?.getPower() ?? 0;
     const attackBonus = army.factionBonus.attack ?? 1.0;
     const defenseBonus = army.factionBonus.defense ?? 1.0;
@@ -367,15 +368,18 @@ export class CombatService {
     initialPower: number,
     finalPower: number
   ): { dead: TroopCount[]; wounded: TroopCount[] } {
+    // Ensure troops is an array
+    const troopsArray = Array.isArray(troops) ? troops : [];
+    
     // Calculate casualty rate based on power loss
-    const powerLossRatio = 1 - (finalPower / initialPower);
+    const powerLossRatio = initialPower > 0 ? 1 - (finalPower / initialPower) : 0;
     const baseCasualtyRate = isLoser ? 0.5 : 0.1;
     const casualtyRate = Math.min(0.8, baseCasualtyRate + powerLossRatio * 0.3);
 
     const dead: TroopCount[] = [];
     const wounded: TroopCount[] = [];
 
-    for (const troop of troops) {
+    for (const troop of troopsArray) {
       const totalLost = Math.floor(troop.count * casualtyRate);
       const deadCount = Math.floor(totalLost * (1 - HOSPITAL_RECOVERY_RATE));
       const woundedCount = totalLost - deadCount;
@@ -435,11 +439,14 @@ export class CombatService {
     targetHero: Hero | null,
     targetFaction: Faction | null
   ): { power: number; troops: { tier: number; count: string }[]; hero: string | null } {
-    const army = this.buildArmy(BigInt(0), targetFaction ?? 'arcade', targetHero, targetTroops);
+    // Ensure targetTroops is an array
+    const troopsArray = Array.isArray(targetTroops) ? targetTroops : [];
+    
+    const army = this.buildArmy(BigInt(0), targetFaction ?? 'arcade', targetHero, troopsArray);
     const power = this.calculateArmyPower(army, 1.0);
 
     // Show approximate troop counts
-    const troops = targetTroops.map(t => ({
+    const troops = troopsArray.map(t => ({
       tier: t.tier,
       count: this.approximateCount(t.count),
     }));

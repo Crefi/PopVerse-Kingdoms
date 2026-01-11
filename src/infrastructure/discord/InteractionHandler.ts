@@ -2,6 +2,10 @@ import { Events, type Interaction } from 'discord.js';
 import type { DiscordClient } from './DiscordClient.js';
 import { CommandRouter } from './CommandRouter.js';
 import { handleMapButton, handleMapSelectMenu } from '../../presentation/discord/commands/map.js';
+import { handleArenaButton, handleArenaSelectMenu } from '../../presentation/discord/commands/arena.js';
+import { handleGuildButton } from '../../presentation/discord/commands/guild.js';
+import { handleRallyButton } from '../../presentation/discord/commands/rally.js';
+import { handleGuildQuestButton } from '../../presentation/discord/commands/guildquests.js';
 import logger from '../../shared/utils/logger.js';
 
 export class InteractionHandler {
@@ -109,6 +113,30 @@ export class InteractionHandler {
           ephemeral: true,
         });
         break;
+      case 'arena':
+        // Arena battle buttons
+        if (params.length >= 1) {
+          await handleArenaButton(interaction, params[0], params.slice(1));
+        }
+        return;
+      case 'guild':
+        // Guild management buttons (disband confirmation)
+        if (params.length >= 1) {
+          await handleGuildButton(interaction, params[0], params.slice(1));
+        }
+        return;
+      case 'rally':
+        // Rally buttons (join, cancel)
+        if (params.length >= 1) {
+          await handleRallyButton(interaction, params[0], params.slice(1));
+        }
+        return;
+      case 'guildquest':
+        // Guild quest buttons (claim)
+        if (params.length >= 1) {
+          await handleGuildQuestButton(interaction, params[0], params.slice(1));
+        }
+        return;
       default:
         // Don't respond to unknown buttons - they might be handled by collectors
         logger.debug(`Unhandled button action: ${action}`);
@@ -127,6 +155,10 @@ export class InteractionHandler {
       case 'map':
         // Map NPC selection
         await handleMapSelectMenu(interaction);
+        return;
+      case 'arena':
+        // Arena hero selection
+        await handleArenaSelectMenu(interaction);
         return;
       case 'faction_select':
         await interaction.reply({

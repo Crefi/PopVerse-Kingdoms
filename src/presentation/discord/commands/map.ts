@@ -188,6 +188,10 @@ export async function generateMapEmbed(
 
   let attachment: AttachmentBuilder | null = null;
   try {
+    console.log(`[MAP DEBUG] Rendering map for player ${player.id}, tiles: ${tileData.length}`);
+    console.log(`[MAP DEBUG] Tiles with NPCs: ${tileData.filter(t => t.npc_id).length}`);
+    console.log(`[MAP DEBUG] Tiles with terrain: ${JSON.stringify(tileData.reduce((acc, t) => { acc[t.terrain] = (acc[t.terrain] || 0) + 1; return acc; }, {} as Record<string, number>))}`);
+    
     const imageBuffer = await imageCacheService.getMapImage(player.id.toString(), {
       tiles: tileData,
       playerX: player.coord_x,
@@ -196,6 +200,7 @@ export async function generateMapEmbed(
       centerY,
       viewSize,
     });
+    console.log(`[MAP DEBUG] Image buffer size: ${imageBuffer.length} bytes`);
     attachment = new AttachmentBuilder(imageBuffer, { name: 'map.png' });
   } catch (error) {
     console.error('Failed to render map image:', error);

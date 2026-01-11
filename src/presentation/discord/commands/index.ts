@@ -11,6 +11,12 @@ import { scoutCommand } from './scout.js';
 import { heroesCommand } from './heroes.js';
 import { dailyCommand } from './daily.js';
 import { tutorialCommand } from './tutorial.js';
+import { arenaCommand } from './arena.js';
+import { landCommand } from './land.js';
+import { guildCommand } from './guild.js';
+import { rallyCommand } from './rally.js';
+import { guildquestsCommand } from './guildquests.js';
+import { researchCommand } from './research.js';
 
 export function loadCommands(): Command[] {
   return [
@@ -26,5 +32,11 @@ export function loadCommands(): Command[] {
     heroesCommand,
     dailyCommand,
     tutorialCommand,
+    arenaCommand,
+    landCommand,
+    guildCommand,
+    rallyCommand,
+    guildquestsCommand,
+    researchCommand,
   ];
 }
