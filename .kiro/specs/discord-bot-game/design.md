@@ -1,6 +1,6 @@
 # Design Document
 
-## Overview  
+## Overview   
 
 PopVerse Kingdoms is a sophisticated Discord-based strategy MMO that merges real-time territory warfare, hero collection mechanics, and competitive PvP systems into a cohesive 3-month seasonal experience. The game supports 50-100 concurrent players per Discord server, featuring three asymmetrically balanced factions (Cinema/Fire, Otaku/Wind, Arcade/Water) competing across a dynamically generated 100x100 tile persistent world.
 
