@@ -3,6 +3,7 @@ name: Gemini Code Review
 on:
   pull_request:
     types: [opened, synchronize]
+  workflow_dispatch:
 
 jobs:
   review:
@@ -11,10 +12,75 @@ jobs:
       contents: read
       pull-requests: write
     steps:
-      - uses: actions/checkout@v4
-      
-      - name: Run Gemini Code Review
-        uses: google-github-actions/run-gemini-cli@main
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
         with:
-          gemini_api_key: ${{ secrets.GEMINI_API_KEY }}
-          command: "review"
+          python-version: '3.10'
+
+      - name: Install Google GenAI Library
+        run: pip install google-genai
+
+      - name: Create and Run Audit Script
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          # Create the python script on the fly
+          cat << 'EOF' > audit.py
+          import os
+          import sys
+          from google import genai
+
+          API_KEY = os.environ.get("GEMINI_API_KEY")
+          if not API_KEY:
+              print("❌ Error: GEMINI_API_KEY is missing!")
+              sys.exit(1)
+
+          client = genai.Client(api_key=API_KEY)
+
+          # Collect code from src folder
+          code_text = ""
+          print("📂 Reading files from src/...")
+          
+          # CHANGE THIS if your code is not in 'src'
+          for root, dirs, files in os.walk("./src"): 
+              for file in files:
+                  if file.endswith(('.ts', '.js', '.json', '.py', '.html')):
+                      path = os.path.join(root, file)
+                      try:
+                          with open(path, "r", encoding="utf-8") as f:
+                              code_text += f"\n--- FILE: {path} ---\n{f.read()}\n"
+                      except:
+                          pass
+
+          if len(code_text) < 10:
+              print("⚠️ No code found to review.")
+              sys.exit(0)
+
+          print(f"🚀 Sending {len(code_text)} characters to Gemini...")
+          
+          prompt = f"""
+          You are a strict Senior Developer. Review this code.
+          Focus on: 1. Bugs, 2. Security, 3. Performance.
+          
+          CODEBASE:
+          {code_text[:900000]}
+          """
+
+          try:
+              response = client.models.generate_content(
+                  model="gemini-1.5-flash", 
+                  contents=prompt
+              )
+              print("\n" + "="*30)
+              print(response.text)
+              print("="*30)
+          except Exception as e:
+              print(f"❌ Gemini Error: {e}")
+              sys.exit(1)
+          EOF
+          
+          # Run the script we just created
+          python audit.py
