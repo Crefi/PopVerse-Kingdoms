@@ -107,18 +107,21 @@ PopVerse Kingdoms is a comprehensive Discord bot-based strategy game that combin
 5. WHEN guilds own lands THEN the system SHALL apply bonuses to all members regardless of their personal land ownership
 6. WHEN new players reach HQ 5 without guilds THEN the system SHALL auto-post recruitment messages in #guild-recruitment
 
-### Requirement 9: Conquest Weekly Events with Anti-Lag Mechanics
+### Requirement 9: Admin-Triggered Conquest Events with Anti-Lag Mechanics
 
-**User Story:** As a player, I want to participate in weekly server-wide events where I compete for control points, so that I can earn exclusive rewards and engage in large-scale strategic warfare.
+**User Story:** As a server administrator, I want to manually start Conquest events at my chosen time, so that I can schedule events when my community is most active and engaged.
 
 #### Acceptance Criteria
 
-1. WHEN Conquest events start THEN the system SHALL spawn 5 Control Points at strategic map locations for 1-hour duration
-2. WHEN players attack Control Points THEN the system SHALL queue battles to prevent simultaneous conflicts and lag
-3. WHEN players control points THEN the system SHALL award 1 point per minute held with real-time leaderboard updates
-4. WHEN players attack the same Control Point THEN the system SHALL enforce 5-minute cooldowns per player to prevent spam
-5. WHEN events conclude THEN the system SHALL distribute rewards to top 10 individuals and top 3 guilds (Diamonds, Hero Shards, Land Vouchers)
-6. WHEN battles occur THEN the system SHALL post live updates to #conquest-live channel for real-time event tracking
+1. WHEN an admin runs `/conquest start` THEN the system SHALL spawn 5 Control Points at strategic map locations for 1-hour duration
+2. WHEN an admin runs `/conquest start [duration]` THEN the system SHALL allow custom event duration (30-120 minutes)
+3. WHEN players attack Control Points THEN the system SHALL queue battles to prevent simultaneous conflicts and lag
+4. WHEN players control points THEN the system SHALL award 1 point per minute held with real-time leaderboard updates
+5. WHEN players attack the same Control Point THEN the system SHALL enforce 5-minute cooldowns per player to prevent spam
+6. WHEN events conclude THEN the system SHALL distribute rewards to top 10 individuals and top 3 guilds (Diamonds, Hero Shards, Land Vouchers)
+7. WHEN battles occur THEN the system SHALL post live updates to #conquest-live channel for real-time event tracking
+8. WHEN an admin runs `/conquest stop` THEN the system SHALL end the event early and distribute rewards based on current standings
+9. WHEN an admin runs `/conquest status` THEN the system SHALL show current event status, time remaining, and leaderboard
 
 ### Requirement 10: Map System with Multiple Viewing Options
 
@@ -221,7 +224,7 @@ PopVerse Kingdoms is a comprehensive Discord bot-based strategy game that combin
 
 **User Story:** As a guild member, I want access to advanced coordination tools and shared objectives, so that my guild can work together effectively in competitive events and territory control.
 
-#### Acceptance Criteria
+#### Acceptance Criteria 
 
 1. WHEN guilds are created THEN the system SHALL establish private channels, shared banks, and daily quest systems
 2. WHEN guild rallies are initiated THEN the system SHALL allow up to 5 members to combine armies for joint attacks
@@ -233,7 +236,7 @@ PopVerse Kingdoms is a comprehensive Discord bot-based strategy game that combin
 
 **User Story:** As a player, I want special events and bonuses during the final week of each season, so that there's excitement and urgency leading up to the seasonal reset.
 
-#### Acceptance Criteria
+#### Acceptance Criteria 
 
 1. WHEN the final week begins THEN the system SHALL activate double Diamond rewards from all sources
 2. WHEN end-of-season Conquest occurs THEN the system SHALL run events on both Friday and Saturday for maximum participation
