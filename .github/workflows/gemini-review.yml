@@ -18,7 +18,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.10'
+          python-version: '3.11'
 
       - name: Install Google GenAI Library
         run: pip install google-genai
@@ -27,27 +27,30 @@ jobs:
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: |
-          # Create the python script on the fly
           cat << 'EOF' > audit.py
           import os
           import sys
           from google import genai
-
+          
           API_KEY = os.environ.get("GEMINI_API_KEY")
           if not API_KEY:
               print("❌ Error: GEMINI_API_KEY is missing!")
               sys.exit(1)
 
           client = genai.Client(api_key=API_KEY)
-
-          # Collect code from src folder
-          code_text = ""
-          print("📂 Reading files from src/...")
           
-          # CHANGE THIS if your code is not in 'src'
-          for root, dirs, files in os.walk("./src"): 
+          # --- MODEL SELECTOR ---
+          # In 2026, we try Gemini 2.0 first.
+          target_models = ["gemini-2.0-flash-exp", "gemini-2.0-flash", "gemini-1.5-flash-latest"]
+          
+          # 1. READ CODE
+          code_text = ""
+          extensions = {'.ts', '.js', '.py', '.json', '.html', '.css'}
+          
+          print("📂 Reading files...")
+          for root, dirs, files in os.walk("./src"):
               for file in files:
-                  if file.endswith(('.ts', '.js', '.json', '.py', '.html')):
+                  if os.path.splitext(file)[1] in extensions:
                       path = os.path.join(root, file)
                       try:
                           with open(path, "r", encoding="utf-8") as f:
@@ -59,28 +62,45 @@ jobs:
               print("⚠️ No code found to review.")
               sys.exit(0)
 
+          # 2. CALL API
           print(f"🚀 Sending {len(code_text)} characters to Gemini...")
           
           prompt = f"""
-          You are a strict Senior Developer. Review this code.
-          Focus on: 1. Bugs, 2. Security, 3. Performance.
+          You are a Senior Code Reviewer. Review this Diff/Codebase.
+          Focus on: 1. Critical Bugs, 2. Security Vulnerabilities.
           
           CODEBASE:
           {code_text[:900000]}
           """
 
+          # Try models in order until one works
+          for model_name in target_models:
+              print(f"🔄 Trying model: {model_name}...")
+              try:
+                  response = client.models.generate_content(
+                      model=model_name, 
+                      contents=prompt
+                  )
+                  print("\n" + "="*30)
+                  print(f"✅ SUCCESS ({model_name})")
+                  print("="*30)
+                  print(response.text)
+                  sys.exit(0) # Exit successfully
+              except Exception as e:
+                  print(f"⚠️ Failed with {model_name}: {e}")
+
+          # If we get here, all models failed. Let's list what IS available.
+          print("\n❌ All attempts failed. Listing available models to debug:")
           try:
-              response = client.models.generate_content(
-                  model="gemini-1.5-flash", 
-                  contents=prompt
-              )
-              print("\n" + "="*30)
-              print(response.text)
-              print("="*30)
-          except Exception as e:
-              print(f"❌ Gemini Error: {e}")
-              sys.exit(1)
+              # This might vary slightly by SDK version, but usually works
+              import google.generativeai as old_genai
+              old_genai.configure(api_key=API_KEY)
+              for m in old_genai.list_models():
+                  print(f" - {m.name}")
+          except:
+              print("Could not list models.")
+              
+          sys.exit(1)
           EOF
           
-          # Run the script we just created
           python audit.py
