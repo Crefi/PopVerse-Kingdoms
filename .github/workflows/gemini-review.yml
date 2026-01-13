@@ -3,6 +3,7 @@ name: Gemini Code Review
 on:
   pull_request:
     types: [opened, synchronize]
+  workflow_dispatch: # Allows manual triggering
 
 jobs:
   review:
@@ -11,10 +12,82 @@ jobs:
       contents: read
       pull-requests: write
     steps:
-      - uses: actions/checkout@v4
-      
-      - name: Run Gemini Code Review
-        uses: google-github-actions/run-gemini-cli@0
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
         with:
-          gemini_api_key: ${{ secrets.GEMINI_API_KEY }}
-          command: "review"
+          python-version: '3.10'
+
+      - name: Install Google GenAI Library
+        run: pip install google-genai
+
+      - name: Create Audit Script
+        run: |
+          cat << 'EOF' > audit_script.py
+          import os
+          import sys
+          from google import genai
+          
+          # 1. SETUP
+          API_KEY = os.environ["GEMINI_API_KEY"]
+          if not API_KEY:
+              print("❌ Error: GEMINI_API_KEY not found!")
+              sys.exit(1)
+              
+          client = genai.Client(api_key=API_KEY)
+          
+          # 2. GATHER CODE
+          # (Only checking src/ folder to keep it fast, add more if needed)
+          code_content = ""
+          extensions = {'.ts', '.js', '.py', '.json'}
+          
+          print("📂 Reading files...")
+          for root, dirs, files in os.walk("./src"):
+              for file in files:
+                  if os.path.splitext(file)[1] in extensions:
+                      path = os.path.join(root, file)
+                      try:
+                          with open(path, 'r', encoding='utf-8') as f:
+                              code_content += f"\n--- FILE: {path} ---\n{f.read()}\n"
+                      except:
+                          pass
+
+          if not code_content:
+              print("⚠️ No code found to review.")
+              sys.exit(0)
+
+          # 3. SEND TO GEMINI
+          print(f"🚀 Sending {len(code_content)} chars to Gemini...")
+          prompt = f"""
+          You are a Code Reviewer. Review this Diff/Codebase.
+          Focus on: Bugs, Security, and Code Quality.
+          Be concise.
+
+          CODE:
+          {code_content[:900000]} 
+          """ 
+          # Note: Capping at ~900k chars to be safe, though Flash handles 1M+
+
+          try:
+              response = client.models.generate_content(
+                  model="gemini-1.5-flash", 
+                  contents=prompt
+              )
+              print("\n" + "="*20 + " GEMINI REVIEW " + "="*20)
+              print(response.text)
+              
+              # Optional: Save to file if you want to upload it as an artifact later
+              with open("review.md", "w") as f:
+                  f.write(response.text)
+                  
+          except Exception as e:
+              print(f"❌ Gemini Error: {e}")
+              sys.exit(1)
+          EOF
+
+      - name: Run Audit
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: python audit_script.py
