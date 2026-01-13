@@ -224,7 +224,7 @@ PopVerse Kingdoms is a comprehensive Discord bot-based strategy game that combin
 
 **User Story:** As a guild member, I want access to advanced coordination tools and shared objectives, so that my guild can work together effectively in competitive events and territory control.
 
-#### Acceptance Criteria 
+#### Acceptance Criteria  
 
 1. WHEN guilds are created THEN the system SHALL establish private channels, shared banks, and daily quest systems
 2. WHEN guild rallies are initiated THEN the system SHALL allow up to 5 members to combine armies for joint attacks
