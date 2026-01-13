@@ -16,7 +16,8 @@ export const helpCommand: Command = {
           { name: 'Combat & Troops', value: 'combat' },
           { name: 'Arena', value: 'arena' },
           { name: 'Guild', value: 'guild' },
-          { name: 'Map & Land', value: 'map' }
+          { name: 'Map & Land', value: 'map' },
+          { name: 'Conquest Events', value: 'conquest' }
         )
     ) as SlashCommandBuilder,
 
@@ -43,6 +44,9 @@ export const helpCommand: Command = {
         break;
       case 'map':
         embed = createMapEmbed();
+        break;
+      case 'conquest':
+        embed = createConquestEmbed();
         break;
       default:
         embed = createMainHelpEmbed();
@@ -93,6 +97,11 @@ function createMainHelpEmbed(): EmbedBuilder {
       {
         name: '🏪 Economy',
         value: '`/shop` Buy items\n`/daily` Daily rewards',
+        inline: true,
+      },
+      {
+        name: '⚔️ Conquest',
+        value: '`/conquest` Server events\n`/conquest status` Leaderboard',
         inline: true,
       }
     )
@@ -278,4 +287,53 @@ function createMapEmbed(): EmbedBuilder {
       }
     )
     .setColor('#228B22');
+}
+
+
+function createConquestEmbed(): EmbedBuilder {
+  return new EmbedBuilder()
+    .setTitle('⚔️ Conquest Events')
+    .setDescription(
+      '**Compete in server-wide guild events for glory and rewards!**\n\n' +
+      '🛡️ **This is a guild-focused event!** Coordinate with your guild for maximum impact.\n\n' +
+      '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'
+    )
+    .addFields(
+      { name: '`/conquest status`', value: 'View current event status and leaderboard', inline: false },
+      { name: '`/conquest attack point:[1-5]`', value: 'Capture a Control Point solo during an event', inline: false },
+      { name: '`/conquest rally`', value: '🛡️ Start a guild rally (select point from dropdown)', inline: false },
+      { name: '`/conquest start duration:[30-120]`', value: '🔒 **Admin Only** — Start a new Conquest event', inline: false },
+      { name: '`/conquest stop`', value: '🔒 **Admin Only** — End the current event early', inline: false },
+      {
+        name: '🛡️ Guild Rally System (No Troops Needed!)',
+        value:
+          '> • Use `/conquest rally` to start\n' +
+          '> • Select a Control Point from the dropdown\n' +
+          '> • Guild members click "Join Rally" to participate\n' +
+          '> • Leader clicks "Send Rally" to launch attack\n' +
+          '> • All participants capture the point together!\n' +
+          '> • **Note:** This is different from `/rally` which is for attacking players/NPCs',
+        inline: false,
+      },
+      {
+        name: '🏰 How Conquest Works',
+        value:
+          '> • Admins start events with 5 Control Points\n' +
+          '> • Control Points appear as temples on the map\n' +
+          '> • Capture points by attacking them\n' +
+          '> • Earn 1 point per minute while holding a point\n' +
+          '> • 5-minute cooldown between attacks on same point\n' +
+          '> • Events last 30-120 minutes',
+        inline: false,
+      },
+      {
+        name: '🏆 Rewards',
+        value:
+          '> **Top 10 Players:** 100-2000 Diamonds + Hero Shards\n' +
+          '> **Top 3 Guilds:** 1500-5000 Diamonds to treasury\n' +
+          '> Rewards distributed when event ends!',
+        inline: false,
+      }
+    )
+    .setColor('#FF4444');
 }

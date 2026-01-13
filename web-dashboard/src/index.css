@@ -1,0 +1,28 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --cinema-color: #e74c3c;
+  --otaku-color: #9b59b6;
+  --arcade-color: #3498db;
+}
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+  background-color: #1a1a2e;
+  color: #eee;
+}
+
+.leaflet-container {
+  background: #1a1a2e;
+}
+
+.faction-cinema { color: var(--cinema-color); }
+.faction-otaku { color: var(--otaku-color); }
+.faction-arcade { color: var(--arcade-color); }
+
+.bg-faction-cinema { background-color: var(--cinema-color); }
+.bg-faction-otaku { background-color: var(--otaku-color); }
+.bg-faction-arcade { background-color: var(--arcade-color); }

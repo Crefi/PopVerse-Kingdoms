@@ -258,16 +258,21 @@
   - Create tutorial feedback system and completion analytics for optimization
   - _Requirements: 16.1, 16.2, 16.3, 16.4, 16.5_
 
-## Phase 10: Conquest Events and Server-Wide Activities
+## Phase 10: Admin-Triggered Conquest Events
 
-- [ ] 10. Weekly Conquest Event System
-  - Implement Saturday 8 PM Conquest events with 1-hour duration and 5 Control Points
-  - Create Control Point spawning at strategic map locations with 1-hour advance notice
-  - Build battle queue system preventing simultaneous attacks and managing player cooldowns (5 minutes per point)
-  - Implement real-time scoring (1 point per minute held) with live leaderboard updates
-  - Add Conquest reward distribution (top 10 individuals, top 3 guilds) with Diamonds and Hero Shards
-  - Create `#conquest-live` channel with automated real-time event updates and battle notifications
-  - _Requirements: 9.1, 9.2, 9.3, 9.4, 9.5_
+- [x] 10. Admin-Triggered Conquest Event System ✅
+  - ✅ Implement `/conquest start [duration]` admin command to manually trigger Conquest events (default 60 min, range 30-120)
+  - ✅ Create `/conquest stop` command to end events early and distribute rewards based on current standings
+  - ✅ Implement `/conquest status` command showing event status, time remaining, and current leaderboard
+  - ✅ Create Control Point spawning at strategic map locations with configurable count (default 5)
+  - ✅ Build battle queue system preventing simultaneous attacks and managing player cooldowns (5 minutes per point)
+  - ✅ Implement real-time scoring (1 point per minute held) with live leaderboard updates
+  - ✅ Add Conquest reward distribution (top 10 individuals, top 3 guilds) with Diamonds and Hero Shards
+  - ✅ Implement `/conquest rally` for guild-coordinated attacks with 1-minute join window and interactive buttons
+  - ✅ Add Control Point visualization on map as Ancient War Temples with faction-colored ownership
+  - ✅ Add admin permission checks (server owner or admin role required)
+  - ✅ Fixed date conversion issue for cached events
+  - _Requirements: 9.1, 9.2, 9.3, 9.4, 9.5, 9.6, 9.7, 9.8, 9.9_
 
 - [ ] 10.1 Conquest Anti-Lag and Performance Optimization
   - Implement battle queue management with order-of-arrival processing and conflict resolution
@@ -280,7 +285,7 @@
 
 ## Phase 11: Web Dashboard and Advanced Features
 
-- [ ] 11. Optional Web Dashboard Implementation
+- [x] 11. Optional Web Dashboard Implementation
   - Create Express.js server with REST API endpoints for map data and player information
   - Implement Discord OAuth integration for secure web dashboard access
   - Build React frontend with interactive 100x100 zoomable map using Leaflet.js
@@ -289,18 +294,22 @@
   - Implement mobile-responsive design ensuring full functionality across devices
   - _Requirements: 10.5, 10.6_
 
-- [ ] 11.1 Web Dashboard Advanced Features
-  - Create player statistics dashboard with detailed analytics and performance metrics
-  - Implement guild management interface with member oversight and coordination tools
-  - Build battle history viewer with detailed combat logs and replay functionality
-  - Add market analysis tools showing land values, resource prices, and economic trends
-  - Create strategic planning tools with army calculators and battle simulators
-  - Implement notification system with Discord webhook integration for important events
+- [x] 11.1 Web Dashboard Advanced Features ✅
+  - ✅ Created React frontend with Vite + TypeScript + Tailwind CSS
+  - ✅ Implemented interactive 100x100 zoomable map using Leaflet.js with canvas rendering
+  - ✅ Built player statistics dashboard with resources, troops, and profile info
+  - ✅ Created battle history viewer with detailed combat logs
+  - ✅ Implemented leaderboards (Arena, Power, Guilds, Factions)
+  - ✅ Added real-time march tracking with WebSocket integration
+  - ✅ Built Discord OAuth login flow and dev login for testing
+  - ✅ Made mobile-responsive design with sidebar navigation
+  - ✅ Added player search and "Go to my city" functionality
+  - ✅ Implemented land parcel overlay and NPC markers on map
   - _Requirements: 10.5, 10.6_
 
 ## Phase 12: Seasonal System and Progression
 
-- [ ] 12. Season Management and Reset System
+- [x] 12. Season Management and Reset System
   - Implement 3-month seasonal cycles with automatic reset scheduling and player notification
   - Create season end processing preserving Diamonds and Prestige Points while resetting progress
   - Build Hall of Fame system archiving top players and achievements from completed seasons
@@ -309,7 +318,7 @@
   - Create seasonal statistics tracking and historical performance analysis
   - _Requirements: 17.1, 17.2, 17.3, 17.4, 17.5_
 
-- [ ] 12.1 Prestige System and Cosmetic Rewards
+- [x] 12.1 Prestige System and Cosmetic Rewards
   - Implement Prestige Point calculation based on HQ level, Arena tier, Conquest participation, land ownership
   - Create cosmetic unlock system (city skins, profile badges, guild banners) persisting across seasons
   - Build achievement system with permanent rewards and recognition for milestone completion
@@ -318,10 +327,8 @@
   - Create prestige shop with exclusive cosmetic purchases using accumulated points
   - _Requirements: 17.1, 17.2, 17.3_
 
-- [ ] 12.2 End-of-Season Events and Celebrations
+- [x] 12.2 End-of-Season Events and Celebrations
   - Implement final week bonuses (double Diamonds, XP boost weekends, land sales)
-  - Create Mega Conquest events (Friday and Saturday) with enhanced rewards and participation
-  - Build cooperative World Boss event requiring server-wide coordination and contribution tracking
   - Implement end-of-season celebration with special rewards and community recognition
   - Add season wrap-up statistics and personal achievement summaries for all players
   - Create season transition hype building with previews and preparation guides

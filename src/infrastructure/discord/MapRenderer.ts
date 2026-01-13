@@ -46,6 +46,14 @@ interface LandData {
   ownerType: 'player' | 'guild' | null;
 }
 
+interface ControlPointData {
+  id: number;
+  x: number;
+  y: number;
+  currentOwner: string | null;
+  ownerFaction: string | null;
+}
+
 export interface MapRenderOptions {
   tiles: TileData[];
   playerX: number;
@@ -54,10 +62,11 @@ export interface MapRenderOptions {
   centerY: number;
   viewSize: number;
   lands?: LandData[];
+  controlPoints?: ControlPointData[];
 }
 
 export function renderMapImage(options: MapRenderOptions): Buffer {
-  const { tiles, playerX, playerY, centerX, centerY, viewSize, lands = [] } = options;
+  const { tiles, playerX, playerY, centerX, centerY, viewSize, lands = [], controlPoints = [] } = options;
 
   const mapPixelSize = viewSize * TILE_SIZE;
   const canvasW = mapPixelSize + COORD_SIZE;
@@ -82,6 +91,12 @@ export function renderMapImage(options: MapRenderOptions): Buffer {
         landTileMap.set(`${lx},${ly}`, land);
       }
     }
+  }
+
+  // Create a map of control points for quick lookup
+  const controlPointMap = new Map<string, ControlPointData>();
+  for (const cp of controlPoints) {
+    controlPointMap.set(`${cp.x},${cp.y}`, cp);
   }
 
   ctx.translate(COORD_SIZE, COORD_SIZE);
@@ -129,6 +144,12 @@ export function renderMapImage(options: MapRenderOptions): Buffer {
       } else if (tile?.occupant_id && tile.occupant_faction) {
         drawFactionUnit(ctx, cx, cy, TILE_SIZE, FACTION_COLORS[tile.occupant_faction], tile.occupant_faction);
       }
+
+      // Control Points (Conquest event)
+      const controlPoint = controlPointMap.get(`${worldX},${worldY}`);
+      if (controlPoint) {
+        drawControlPoint(ctx, cx, cy, TILE_SIZE, controlPoint);
+      }
     }
   }
 
@@ -150,6 +171,130 @@ export function renderMapImage(options: MapRenderOptions): Buffer {
 }
 
 // ================= NEW ICON RENDERERS =================
+
+/**
+ * Draw a Conquest Control Point - Ancient War Temple
+ * These are strategic locations that guilds fight over during conquest events
+ */
+function drawControlPoint(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  s: number,
+  cp: ControlPointData
+) {
+  const iconSize = s * 0.85;
+  
+  // Determine color based on owner faction
+  let baseColor = '#8B8B8B'; // Neutral grey
+  let glowColor = 'rgba(139, 139, 139, 0.3)';
+  
+  if (cp.ownerFaction) {
+    const factionColors: Record<string, [string, string]> = {
+      cinema: ['#e74c3c', 'rgba(231, 76, 60, 0.4)'],
+      otaku: ['#2ecc71', 'rgba(46, 204, 113, 0.4)'],
+      arcade: ['#3498db', 'rgba(52, 152, 219, 0.4)'],
+    };
+    const colors = factionColors[cp.ownerFaction];
+    if (colors) {
+      baseColor = colors[0];
+      glowColor = colors[1];
+    }
+  }
+
+  // 1. Glowing aura (pulsing effect simulated with gradient)
+  const gradient = ctx.createRadialGradient(x, y, 0, x, y, iconSize * 0.6);
+  gradient.addColorStop(0, glowColor);
+  gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+  ctx.fillStyle = gradient;
+  ctx.beginPath();
+  ctx.arc(x, y, iconSize * 0.6, 0, Math.PI * 2);
+  ctx.fill();
+
+  // 2. Temple base platform (stone)
+  ctx.fillStyle = '#5d5d5d';
+  ctx.beginPath();
+  ctx.moveTo(x - iconSize * 0.45, y + iconSize * 0.35);
+  ctx.lineTo(x + iconSize * 0.45, y + iconSize * 0.35);
+  ctx.lineTo(x + iconSize * 0.35, y + iconSize * 0.25);
+  ctx.lineTo(x - iconSize * 0.35, y + iconSize * 0.25);
+  ctx.closePath();
+  ctx.fill();
+
+  // 3. Temple pillars (left and right)
+  ctx.fillStyle = '#7f7f7f';
+  // Left pillar
+  ctx.fillRect(x - iconSize * 0.3, y - iconSize * 0.25, iconSize * 0.12, iconSize * 0.5);
+  // Right pillar
+  ctx.fillRect(x + iconSize * 0.18, y - iconSize * 0.25, iconSize * 0.12, iconSize * 0.5);
+
+  // 4. Temple roof (triangular)
+  ctx.fillStyle = baseColor;
+  ctx.beginPath();
+  ctx.moveTo(x, y - iconSize * 0.45);
+  ctx.lineTo(x + iconSize * 0.4, y - iconSize * 0.2);
+  ctx.lineTo(x - iconSize * 0.4, y - iconSize * 0.2);
+  ctx.closePath();
+  ctx.fill();
+
+  // 5. Central altar/crystal
+  ctx.fillStyle = baseColor;
+  ctx.beginPath();
+  ctx.moveTo(x, y - iconSize * 0.1);
+  ctx.lineTo(x + iconSize * 0.1, y + iconSize * 0.15);
+  ctx.lineTo(x - iconSize * 0.1, y + iconSize * 0.15);
+  ctx.closePath();
+  ctx.fill();
+
+  // Crystal glow
+  ctx.fillStyle = '#ffffff';
+  ctx.globalAlpha = 0.6;
+  ctx.beginPath();
+  ctx.arc(x, y + iconSize * 0.05, iconSize * 0.05, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.globalAlpha = 1.0;
+
+  // 6. Control Point ID badge
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+  ctx.beginPath();
+  ctx.arc(x + iconSize * 0.3, y - iconSize * 0.35, iconSize * 0.12, 0, Math.PI * 2);
+  ctx.fill();
+  
+  ctx.fillStyle = '#ffffff';
+  ctx.font = `bold ${Math.floor(iconSize * 0.15)}px Arial`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(`${cp.id}`, x + iconSize * 0.3, y - iconSize * 0.35);
+
+  // 7. Conquest flag if owned
+  if (cp.currentOwner) {
+    // Flag pole
+    ctx.strokeStyle = '#4a3728';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(x, y - iconSize * 0.45);
+    ctx.lineTo(x, y - iconSize * 0.7);
+    ctx.stroke();
+
+    // Flag banner
+    ctx.fillStyle = baseColor;
+    ctx.beginPath();
+    ctx.moveTo(x, y - iconSize * 0.7);
+    ctx.lineTo(x + iconSize * 0.25, y - iconSize * 0.6);
+    ctx.lineTo(x, y - iconSize * 0.5);
+    ctx.fill();
+  }
+
+  // 8. Border outline
+  ctx.strokeStyle = '#2c2c2c';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(x, y - iconSize * 0.45);
+  ctx.lineTo(x + iconSize * 0.4, y - iconSize * 0.2);
+  ctx.lineTo(x - iconSize * 0.4, y - iconSize * 0.2);
+  ctx.closePath();
+  ctx.stroke();
+}
 
 /**
  * A proper mine entrance with wooden supports and cart tracks.

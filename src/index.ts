@@ -5,6 +5,7 @@ import { closeRedis, getRedis } from './infrastructure/cache/redis.js';
 import { getDiscordClient, InteractionHandler } from './infrastructure/discord/index.js';
 import { loadCommands } from './presentation/discord/commands/index.js';
 import { npcService } from './domain/services/NpcService.js';
+import { getWebServer } from './infrastructure/web/index.js';
 
 async function bootstrap(): Promise<void> {
   logger.info('Starting PopVerse Kingdoms...');
@@ -73,12 +74,33 @@ async function bootstrap(): Promise<void> {
     }
   }, 5 * 60 * 1000);
 
+  // Start web dashboard if enabled
+  if (config.web.enabled) {
+    try {
+      const webServer = getWebServer();
+      await webServer.start();
+      logger.info('Web dashboard enabled and running');
+    } catch (error) {
+      logger.warn('Failed to start web dashboard:', error);
+    }
+  }
+
   logger.info('PopVerse Kingdoms started successfully!');
 }
 
 // Graceful shutdown
 async function shutdown(): Promise<void> {
   logger.info('Shutting down PopVerse Kingdoms...');
+  
+  // Stop web server if running
+  if (config.web.enabled) {
+    try {
+      const webServer = getWebServer();
+      await webServer.stop();
+    } catch (error) {
+      logger.warn('Error stopping web server:', error);
+    }
+  }
   
   const discordClient = getDiscordClient();
   await discordClient.shutdown();

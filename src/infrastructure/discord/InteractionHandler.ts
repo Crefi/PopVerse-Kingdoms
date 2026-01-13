@@ -8,6 +8,8 @@ import { handleRallyButton } from '../../presentation/discord/commands/rally.js'
 import { handleGuildQuestButton } from '../../presentation/discord/commands/guildquests.js';
 import { handleLandButton } from '../../presentation/discord/commands/land.js';
 import { handleTeleportButton } from '../../presentation/discord/commands/teleport.js';
+import { handleConquestRallyButton, handleConquestRallySelectMenu } from '../../presentation/discord/commands/conquest.js';
+import { handleSeasonButton } from '../../presentation/discord/commands/season.js';
 import logger from '../../shared/utils/logger.js';
 
 export class InteractionHandler {
@@ -151,6 +153,23 @@ export class InteractionHandler {
           await handleTeleportButton(interaction, params[0], params.slice(1));
         }
         return;
+      case 'conquest_rally':
+      case 'conquest_rally_join':
+      case 'conquest_rally_send':
+      case 'conquest_rally_refresh':
+      case 'conquest_rally_cancel':
+      case 'conquest_rally_troops':
+      case 'conquest_rally_confirm':
+        // Conquest rally buttons (join, send, refresh, troop selection)
+        await handleConquestRallyButton(interaction);
+        return;
+      case 'season_start_confirm':
+      case 'season_start_cancel':
+      case 'season_end_confirm':
+      case 'season_end_cancel':
+        // Season management buttons
+        await handleSeasonButton(interaction);
+        return;
       default:
         // Don't respond to unknown buttons - they might be handled by collectors
         logger.debug(`Unhandled button action: ${action}`);
@@ -173,6 +192,14 @@ export class InteractionHandler {
       case 'arena':
         // Arena hero selection
         await handleArenaSelectMenu(interaction);
+        return;
+      case 'conquest_rally_select':
+        // Conquest rally control point selection - handled by collector in handleRally
+        // Don't respond here - let the collector handle it
+        return;
+      case 'conquest_rally_troops':
+        // Conquest rally troop selection
+        await handleConquestRallySelectMenu(interaction);
         return;
       case 'faction_select':
         await interaction.reply({
