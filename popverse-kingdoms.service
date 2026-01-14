@@ -1,0 +1,26 @@
+[Unit]
+Description=PopVerse Kingdoms Discord Bot
+After=network.target postgresql.service redis.service
+Wants=postgresql.service redis.service
+
+[Service]
+Type=simple
+User=alexlv
+WorkingDirectory=/home/alexlv/PopVerse-Kingdoms
+Environment=NODE_ENV=production
+EnvironmentFile=/home/alexlv/PopVerse-Kingdoms/.env.prod
+ExecStart=/usr/bin/npm run start:prod
+Restart=always
+RestartSec=10
+StandardOutput=append:/home/alexlv/PopVerse-Kingdoms/logs/app.log
+StandardError=append:/home/alexlv/PopVerse-Kingdoms/logs/error.log
+
+# Security
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/home/alexlv/PopVerse-Kingdoms/logs /home/alexlv/PopVerse-Kingdoms/backups
+
+[Install]
+WantedBy=multi-user.target

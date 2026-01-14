@@ -76,6 +76,18 @@ export class WebServer {
       res.json({ status: 'ok', timestamp: new Date().toISOString() });
     });
 
+    // Metrics endpoint
+    this.app.get('/metrics', async (_req: Request, res: Response) => {
+      try {
+        const { metricsService } = await import('../../shared/utils/metrics.js');
+        res.set('Content-Type', metricsService.getRegistry().contentType);
+        res.end(await metricsService.getMetrics());
+      } catch (error) {
+        logger.error('Error getting metrics:', error);
+        res.status(500).send('Error getting metrics');
+      }
+    });
+
     // API routes
     this.app.use('/api/auth', authRouter);
     this.app.use('/api/map', authMiddleware, mapRouter);
