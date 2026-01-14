@@ -299,19 +299,6 @@ export async function up(knex: Knex): Promise<void> {
     table.index('starts_at');
   });
 
-  // Seasons table
-  await knex.schema.createTable('seasons', (table) => {
-    table.bigIncrements('id').primary();
-    table.integer('season_number').notNullable();
-    table.timestamp('starts_at').notNullable();
-    table.timestamp('ends_at').notNullable();
-    table.boolean('active').notNullable().defaultTo(true);
-    table.jsonb('hall_of_fame').notNullable().defaultTo('{}');
-    table.timestamp('created_at').notNullable().defaultTo(knex.fn.now());
-
-    table.index('active');
-  });
-
   // Tutorial progress table
   await knex.schema.createTable('tutorial_progress', (table) => {
     table.bigIncrements('id').primary();
@@ -331,7 +318,6 @@ export async function up(knex: Knex): Promise<void> {
 export async function down(knex: Knex): Promise<void> {
   // Drop tables in reverse order
   await knex.schema.dropTableIfExists('tutorial_progress');
-  await knex.schema.dropTableIfExists('seasons');
   await knex.schema.dropTableIfExists('conquest_events');
   await knex.schema.dropTableIfExists('fog_of_war');
   await knex.schema.dropTableIfExists('login_rewards');

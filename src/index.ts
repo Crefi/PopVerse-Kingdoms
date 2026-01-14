@@ -32,14 +32,24 @@ async function bootstrap(): Promise<void> {
   const discordClient = getDiscordClient();
 
   // Load and register commands
-  const commands = loadCommands();
-  await discordClient.registerCommands(commands);
+  try {
+    const commands = loadCommands();
+    await discordClient.registerCommands(commands);
+    logger.info('Discord commands registered successfully');
+  } catch (error) {
+    logger.warn('Failed to register Discord commands (continuing anyway):', error);
+  }
 
   // Set up interaction handler
   new InteractionHandler(discordClient);
 
   // Start the Discord client
-  await discordClient.start();
+  try {
+    await discordClient.start();
+    logger.info('Discord client started successfully');
+  } catch (error) {
+    logger.warn('Failed to start Discord client (continuing anyway):', error);
+  }
 
   // Respawn any NPCs that are ready
   try {

@@ -134,7 +134,6 @@ export async function seed(knex: Knex): Promise<void> {
     bandit_camp: ['Bandit Hideout', 'Outlaw Camp', 'Raider Den', 'Thief Refuge', 'Brigand Base'],
     goblin_outpost: ['Goblin Warren', 'Greenskin Camp', 'Goblin Nest', 'Orc Outpost', 'Troll Cave'],
     dragon_lair: ['Dragon\'s Den', 'Wyrm Lair', 'Drake Nest', 'Serpent Cave', 'Fire Pit'],
-    temple_guardian: ['Temple Guardian', 'Ancient Sentinel', 'Sacred Defender', 'Divine Protector'],
   };
 
   // Generate NPC based on zone
@@ -146,15 +145,15 @@ export async function seed(knex: Knex): Promise<void> {
     const typeRand = hashRandom(x, y, 88888);
 
     let spawnChance = 0.05; // Base 5% spawn rate
-    let npcType: 'bandit_camp' | 'goblin_outpost' | 'dragon_lair' | 'temple_guardian';
+    let npcType: 'bandit_camp' | 'goblin_outpost' | 'dragon_lair';
     let basePower: number;
 
     if (zone === 'temple') {
       // Temple zone - strongest NPCs, lower spawn rate but higher power
       if (centerDist <= 5) {
-        // Very center - Temple Guardians
+        // Very center - Dragon Lairs (strongest)
         if (rand > 0.03) return null;
-        npcType = 'temple_guardian';
+        npcType = 'dragon_lair';
         basePower = 15000;
       } else {
         // Outer temple zone
@@ -247,7 +246,6 @@ export async function seed(knex: Knex): Promise<void> {
     x: tile.x,
     y: tile.y,
     terrain: tile.terrain,
-    zone: tile.zone,
     npc_id: npcIdMap.get(`${tile.x},${tile.y}`) || null,
   }));
 
@@ -299,7 +297,7 @@ export async function seed(knex: Knex): Promise<void> {
   console.log(`   🏴 Bandit Camps:    ${npcCounts.bandit_camp || 0}`);
   console.log(`   👺 Goblin Outposts: ${npcCounts.goblin_outpost || 0}`);
   console.log(`   🐉 Dragon Lairs:    ${npcCounts.dragon_lair || 0}`);
-  console.log(`   🏛️  Temple Guards:   ${npcCounts.temple_guardian || 0}`);
+  console.log(`   🐉 Dragon Lairs:    ${npcCounts.dragon_lair || 0}`);
   console.log(`   Total NPCs: ${npcs.length}`);
   console.log('');
   console.log('🏞️ Land Parcels:');
@@ -348,7 +346,6 @@ async function generateLandParcels(
     max_y: number;
     bonuses: string;
     purchase_cost: number;
-    zone: string;
   }
 
   // Create terrain and zone lookup map
@@ -440,7 +437,6 @@ async function generateLandParcels(
           max_y: maxY,
           bonuses: JSON.stringify(LAND_BONUSES[type]),
           purchase_cost: cost,
-          zone,
         });
 
         occupiedAreas.push({ minX, minY, maxX, maxY });

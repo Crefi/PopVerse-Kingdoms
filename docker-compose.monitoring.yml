@@ -21,6 +21,8 @@ services:
     image: grafana/grafana:latest
     container_name: popverse_grafana
     restart: unless-stopped
+    env_file:
+      - .env.prod
     environment:
       - GF_SECURITY_ADMIN_USER=admin
       - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-changeme}
@@ -58,6 +60,8 @@ services:
     image: oliver006/redis_exporter:latest
     container_name: popverse_redis_exporter
     restart: unless-stopped
+    env_file:
+      - .env.prod
     environment:
       - REDIS_ADDR=redis:6379
       - REDIS_PASSWORD=${REDIS_PASSWORD}
@@ -70,6 +74,8 @@ services:
     image: prometheuscommunity/postgres-exporter:latest
     container_name: popverse_postgres_exporter
     restart: unless-stopped
+    env_file:
+      - .env.prod
     environment:
       - DATA_SOURCE_NAME=postgresql://${DB_USER}:${DB_PASSWORD}@postgres:5432/${DB_NAME}?sslmode=disable
     ports:

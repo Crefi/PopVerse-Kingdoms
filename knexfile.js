@@ -45,18 +45,27 @@ export default {
   },
 
   production: {
-    ...baseConfig,
+    client: 'pg',
     connection: {
       host: process.env.DB_HOST,
       port: parseInt(process.env.DB_PORT || '5432'),
       database: process.env.DB_NAME || 'popverse_kingdoms',
       user: process.env.DB_USER,
       password: process.env.DB_PASSWORD,
-      ssl: { rejectUnauthorized: false },
     },
     pool: {
       min: parseInt(process.env.DB_POOL_MIN || '5'),
       max: parseInt(process.env.DB_POOL_MAX || '20'),
+    },
+    migrations: {
+      directory: './dist/infrastructure/database/migrations',
+      extension: 'js',
+      loadExtensions: ['.js'],
+    },
+    seeds: {
+      directory: './dist/infrastructure/database/seeds',
+      extension: 'js',
+      loadExtensions: ['.js'],
     },
   },
 };

@@ -17,7 +17,7 @@
     "format": "prettier --write \"src/**/*.ts\"",
     "db:migrate": "tsx node_modules/.bin/knex migrate:latest",
     "db:migrate:dev": "tsx node_modules/.bin/knex migrate:latest --env development",
-    "db:migrate:prod": "tsx node_modules/.bin/knex migrate:latest --env production",
+    "db:migrate:prod": "node node_modules/.bin/knex migrate:latest --env production",
     "db:rollback": "tsx node_modules/.bin/knex migrate:rollback",
     "db:seed": "tsx node_modules/.bin/knex seed:run",
     "db:seed:dev": "tsx node_modules/.bin/knex seed:run --env development",
@@ -42,7 +42,7 @@
   "dependencies": {
     "@types/socket.io": "^3.0.1",
     "bullmq": "^5.1.0",
-    "canvas": "^3.2.0",
+    "canvas": "^2.11.2",
     "cors": "^2.8.5",
     "discord.js": "^14.14.1",
     "dotenv": "^16.3.1",

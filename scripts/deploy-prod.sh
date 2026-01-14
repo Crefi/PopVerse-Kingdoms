@@ -33,14 +33,14 @@ echo -e "${YELLOW}Step 4: Waiting for database to be ready...${NC}"
 sleep 10
 
 echo -e "${YELLOW}Step 5: Running database migrations...${NC}"
-npm run db:migrate:prod
+docker exec popverse_app npm run db:migrate:prod
 
 echo -e "${YELLOW}Step 6: Starting monitoring stack...${NC}"
 docker-compose -f docker-compose.monitoring.yml up -d
 
 echo -e "${YELLOW}Step 7: Health check...${NC}"
 sleep 5
-if curl -f http://localhost/health > /dev/null 2>&1; then
+if curl -f http://localhost:8082/health > /dev/null 2>&1; then
     echo -e "${GREEN}✓ Application is healthy!${NC}"
 else
     echo -e "${RED}✗ Health check failed!${NC}"
@@ -54,7 +54,7 @@ echo "✓ Deployment completed successfully!"
 echo "==================================================${NC}"
 echo ""
 echo "Services:"
-echo "  - Application: http://localhost"
+echo "  - Application: http://localhost:8082"
 echo "  - Grafana: http://localhost:3001 (admin / \$GRAFANA_PASSWORD)"
 echo "  - Prometheus: http://localhost:9090"
 echo ""
