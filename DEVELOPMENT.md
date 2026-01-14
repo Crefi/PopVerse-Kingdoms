@@ -349,6 +349,118 @@ npx tsc --noEmit
 ## Useful Links
 
 - **Adminer (DB UI):** http://localhost:8080
+- **Web Dashboard API:** http://localhost:3000 (when enabled)
 - **Discord Developer Portal:** https://discord.com/developers/applications
 - **Discord.js Docs:** https://discord.js.org
 - **Knex.js Docs:** https://knexjs.org
+
+## Web Dashboard
+
+The web dashboard provides a React frontend with an interactive map, player stats, leaderboards, and real-time updates via WebSocket.
+
+### Running the Web Dashboard
+
+1. Start the backend API server (ensure `WEB_ENABLED=true` in `.env.dev`):
+```bash
+npm run dev
+```
+
+2. In a separate terminal, start the React frontend:
+```bash
+cd web-dashboard
+npm install  # First time only
+npm run dev
+```
+
+3. Open http://localhost:5173 in your browser
+
+4. Login using:
+   - Discord OAuth (click "Login with Discord")
+   - Dev Login (enter your Discord ID - you must have registered via `/begin` first)
+
+### Enabling the Web Dashboard
+
+Set `WEB_ENABLED=true` in your `.env.dev` file:
+
+```env
+WEB_PORT=3000
+WEB_ENABLED=true
+JWT_SECRET=your_secret_key
+JWT_EXPIRES_IN=7d
+```
+
+### API Endpoints
+
+#### Authentication
+- `GET /api/auth/discord` - Get Discord OAuth URL
+- `GET /api/auth/discord/callback` - Discord OAuth callback
+- `GET /api/auth/me` - Get current user info
+- `POST /api/auth/dev-login` - Development-only login with Discord ID
+
+#### Map Data
+- `GET /api/map/region/:x/:y/:size` - Get map tiles in a region
+- `GET /api/map/tile/:x/:y` - Get single tile details
+- `GET /api/map/cities` - Get all player cities
+- `GET /api/map/lands` - Get all land parcels
+- `GET /api/map/npcs` - Get all NPCs
+- `GET /api/map/search/player/:name` - Search players by name
+
+#### Player Data
+- `GET /api/player/me` - Get current player's full profile
+- `GET /api/player/:id` - Get another player's public profile
+- `GET /api/player/me/battles` - Get battle history
+- `GET /api/player/me/arena` - Get arena stats
+
+#### Marches
+- `GET /api/marches/active` - Get all active marches (for map visualization)
+- `GET /api/marches/me` - Get current player's marches
+- `GET /api/marches/incoming` - Get incoming attacks
+- `GET /api/marches/:id` - Get march details
+
+#### Leaderboards
+- `GET /api/leaderboard/arena` - Arena rankings
+- `GET /api/leaderboard/power` - Power rankings
+- `GET /api/leaderboard/guilds` - Guild rankings
+- `GET /api/leaderboard/conquest` - Conquest event rankings
+- `GET /api/leaderboard/factions` - Faction statistics
+
+### WebSocket Events
+
+Connect to the WebSocket server with a JWT token:
+
+```javascript
+const socket = io('http://localhost:3000', {
+  auth: { token: 'your_jwt_token' }
+});
+
+// Subscribe to map updates
+socket.emit('subscribe:map', { x: 50, y: 50, size: 15 });
+
+// Subscribe to march tracking
+socket.emit('subscribe:marches');
+
+// Subscribe to conquest updates
+socket.emit('subscribe:conquest');
+
+// Listen for events
+socket.on('march:update', (data) => console.log('March update:', data));
+socket.on('conquest:point:update', (data) => console.log('Control point:', data));
+socket.on('map:tile:update', (data) => console.log('Tile update:', data));
+```
+
+### Testing the API
+
+```bash
+# Development login (get a token)
+curl -X POST http://localhost:3000/api/auth/dev-login \
+  -H "Content-Type: application/json" \
+  -d '{"discordId": "YOUR_DISCORD_ID"}'
+
+# Use the token for authenticated requests
+curl http://localhost:3000/api/player/me \
+  -H "Authorization: Bearer YOUR_TOKEN"
+
+# Get map region
+curl http://localhost:3000/api/map/region/50/50/15 \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```

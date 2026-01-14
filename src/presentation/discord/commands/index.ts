@@ -20,6 +20,9 @@ import { guildquestsCommand } from './guildquests.js';
 import { researchCommand } from './research.js';
 import { shopCommand } from './shop.js';
 import { teleportCommand } from './teleport.js';
+import { conquestCommand } from './conquest.js';
+import { seasonCommand } from './season.js';
+import { prestigeCommand } from './prestige.js';
 
 export function loadCommands(): Command[] {
   return [
@@ -44,5 +47,8 @@ export function loadCommands(): Command[] {
     researchCommand,
     shopCommand,
     teleportCommand,
+    conquestCommand,
+    seasonCommand,
+    prestigeCommand,
   ];
 }

@@ -232,7 +232,7 @@ PopVerse Kingdoms is a comprehensive Discord bot-based strategy game that combin
 4. WHEN new players reach HQ 5 THEN the system SHALL auto-post recruitment messages in #guild-recruitment for guild leaders to respond to
 5. WHEN server launches THEN the system SHALL create three starter guilds (Cinema Legion, Otaku Alliance, Arcade Coalition) that anyone can join immediately
 
-### Requirement 19: End-of-Season Events and Celebrations
+### Requirement 19: End-of-Season Events and Celebrations  
 
 **User Story:** As a player, I want special events and bonuses during the final week of each season, so that there's excitement and urgency leading up to the seasonal reset.
 

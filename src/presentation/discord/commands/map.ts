@@ -16,6 +16,7 @@ import { getDatabase } from '../../../infrastructure/database/connection.js';
 import { MAP_SIZE } from '../../../shared/constants/game.js';
 import { imageCacheService } from '../../../infrastructure/cache/ImageCacheService.js';
 import { DailyQuestService } from '../../../domain/services/DailyQuestService.js';
+import { conquestService } from '../../../domain/services/ConquestService.js';
 import type { Faction } from '../../../shared/types/index.js';
 
 interface MapTileRow {
@@ -182,8 +183,8 @@ export async function generateMapEmbed(
   const occupantIds = tiles.filter((t) => t.occupant_id).map((t) => t.occupant_id as string);
   const npcIds = tiles.filter((t) => t.npc_id).map((t) => t.npc_id as string);
 
-  // Batch fetch occupants, NPCs, and lands in parallel
-  const [occupants, npcsInView, landsInView] = await Promise.all([
+  // Batch fetch occupants, NPCs, lands, and conquest control points in parallel
+  const [occupants, npcsInView, landsInView, activeConquestEvent] = await Promise.all([
     occupantIds.length > 0
       ? db('players').select('id', 'faction', 'username').whereIn('id', occupantIds) as Promise<PlayerRow[]>
       : Promise.resolve([] as PlayerRow[]),
@@ -199,6 +200,8 @@ export async function generateMapEmbed(
           .andWhere('min_y', '<=', maxY)
           .andWhere('max_y', '>=', minY);
       }) as Promise<LandRow[]>,
+    // Fetch active conquest event for control points
+    conquestService.getActiveEvent(),
   ]);
 
   const occupantMap = new Map(occupants.map((o) => [o.id.toString(), o]));
@@ -222,6 +225,15 @@ export async function generateMapEmbed(
     ownerType: l.owner_player_id ? 'player' as const : l.owner_guild_id ? 'guild' as const : null,
   }));
 
+  // Transform control points for renderer (if conquest event is active)
+  const controlPointData = activeConquestEvent?.controlPoints.map((cp) => ({
+    id: cp.id,
+    x: cp.x,
+    y: cp.y,
+    currentOwner: cp.currentOwner,
+    ownerFaction: cp.ownerFaction,
+  })) || [];
+
   let attachment: AttachmentBuilder | null = null;
   try {
     const imageBuffer = await imageCacheService.getMapImage(player.id.toString(), {
@@ -232,6 +244,7 @@ export async function generateMapEmbed(
       centerY,
       viewSize,
       lands: landData,
+      controlPoints: controlPointData,
     });
     attachment = new AttachmentBuilder(imageBuffer, { name: 'map.png' });
   } catch (error) {

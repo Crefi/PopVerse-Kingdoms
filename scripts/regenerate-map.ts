@@ -2,6 +2,13 @@
  * Regenerate the world map with terrain and NPCs
  * This preserves player positions but regenerates all terrain and NPCs
  * 
+ * Map Layout:
+ * - Mountains at the edges (natural border)
+ * - Forests scattered throughout  
+ * - Resources spread across the map (slightly more in center)
+ * - Plains everywhere else
+ * - NO water/lakes
+ * 
  * Usage: npx tsx scripts/regenerate-map.ts
  */
 
@@ -14,11 +21,13 @@ import knexConfig from '../knexfile.js';
 const db = knex(knexConfig.development);
 
 const MAP_SIZE = 100;
+const CENTER = MAP_SIZE / 2;
 
 interface TileData {
   x: number;
   y: number;
   terrain: string;
+  zone?: string;
 }
 
 interface NPCData {
@@ -31,107 +40,115 @@ interface NPCData {
   rewards: string;
 }
 
-// NPC names by type
 const NPC_NAMES = {
   bandit_camp: ['Bandit Hideout', 'Outlaw Camp', 'Raider Den', 'Thief Refuge', 'Brigand Base'],
   goblin_outpost: ['Goblin Warren', 'Greenskin Camp', 'Goblin Nest', 'Orc Outpost', 'Troll Cave'],
   dragon_lair: ["Dragon's Den", 'Wyrm Lair', 'Drake Nest', 'Serpent Cave', 'Fire Pit'],
 };
 
-// Seeded random function for consistent map generation
-const seededRandom = (x: number, y: number, offset: number = 0): number => {
-  const seed = ((x * 1000 + y + offset) * 9973) % 2147483647;
-  return ((seed * 16807) % 2147483647) / 2147483647;
+// Hash-based random to avoid patterns
+const hashRandom = (x: number, y: number, seed: number = 0): number => {
+  let h = seed + x * 374761393 + y * 668265263;
+  h = (h ^ (h >> 13)) * 1274126177;
+  h = h ^ (h >> 16);
+  return (Math.abs(h) % 10000) / 10000;
 };
 
-// Terrain distribution based on distance from center
-const getTerrainAt = (x: number, y: number): string => {
-  const centerX = MAP_SIZE / 2;
-  const centerY = MAP_SIZE / 2;
-  const distFromCenter = Math.sqrt((x - centerX) ** 2 + (y - centerY) ** 2);
-  const random = seededRandom(x, y);
+const distanceFromEdge = (x: number, y: number): number => {
+  return Math.min(x, MAP_SIZE - 1 - x, y, MAP_SIZE - 1 - y);
+};
 
-  // Center area - more resources, strategic value
-  if (distFromCenter < 15) {
-    if (random < 0.08) return 'resource';
-    if (random < 0.15) return 'lake';
-    if (random < 0.25) return 'forest';
-    if (random < 0.30) return 'mountain';
-    return 'plains';
-  }
-
-  // Middle ring - mixed terrain
-  if (distFromCenter < 35) {
-    if (random < 0.04) return 'resource';
-    if (random < 0.14) return 'mountain';
-    if (random < 0.24) return 'lake';
-    if (random < 0.38) return 'forest';
-    return 'plains';
-  }
-
-  // Outer ring (spawn zone) - mostly plains, easier for new players
-  if (random < 0.02) return 'resource';
-  if (random < 0.08) return 'mountain';
-  if (random < 0.14) return 'lake';
-  if (random < 0.24) return 'forest';
-  return 'plains';
+const distanceFromCenter = (x: number, y: number): number => {
+  return Math.sqrt((x - CENTER) ** 2 + (y - CENTER) ** 2);
 };
 
 type NpcType = 'bandit_camp' | 'goblin_outpost' | 'dragon_lair';
 
-// Generate NPC if conditions are met
-const generateNPC = (x: number, y: number, terrain: string): NPCData | null => {
-  // Only spawn on plains or forest
+// Zone configuration
+const TEMPLE_RADIUS = 15;
+const RESOURCE_RADIUS = 30;
+
+const getZone = (x: number, y: number): string => {
+  const centerDist = distanceFromCenter(x, y);
+  if (centerDist <= TEMPLE_RADIUS) return 'temple';
+  if (centerDist <= RESOURCE_RADIUS) return 'resource';
+  return 'spawn';
+};
+
+// Updated terrain generation with zones
+const getTerrainWithZone = (x: number, y: number): { terrain: string; zone: string } => {
+  const edgeDist = distanceFromEdge(x, y);
+  const centerDist = distanceFromCenter(x, y);
+  const zone = getZone(x, y);
+  const rand = hashRandom(x, y, 12345);
+  const rand2 = hashRandom(x, y, 67890);
+  const forestRand = hashRandom(x, y, 11111);
+  
+  // Mountains at edges (3-4 tiles thick)
+  if (edgeDist <= 2) return { terrain: 'mountain', zone };
+  if (edgeDist === 3 && rand < 0.7) return { terrain: 'mountain', zone };
+  if (edgeDist === 4 && rand < 0.4) return { terrain: 'mountain', zone };
+  if (rand < 0.01) return { terrain: 'mountain', zone };
+  
+  // Zone-based terrain
+  if (zone === 'temple') {
+    if (centerDist <= 5) {
+      if (rand2 < 0.05) return { terrain: 'resource', zone };
+      if (forestRand < 0.05) return { terrain: 'forest', zone };
+    } else {
+      if (rand2 < 0.08) return { terrain: 'resource', zone };
+      if (forestRand < 0.10) return { terrain: 'forest', zone };
+    }
+  } else if (zone === 'resource') {
+    if (rand2 < 0.15) return { terrain: 'resource', zone };
+    if (forestRand < 0.12) return { terrain: 'forest', zone };
+  } else {
+    if (rand2 < 0.04) return { terrain: 'resource', zone };
+    if (forestRand < 0.10) return { terrain: 'forest', zone };
+  }
+  
+  return { terrain: 'plains', zone };
+};
+
+// Updated NPC generation with zones
+const generateNPCWithZone = (x: number, y: number, terrain: string, zone: string): NPCData | null => {
   if (terrain !== 'plains' && terrain !== 'forest') return null;
 
-  const random = seededRandom(x, y, 12345);
-  const centerX = MAP_SIZE / 2;
-  const centerY = MAP_SIZE / 2;
-  const distFromCenter = Math.sqrt((x - centerX) ** 2 + (y - centerY) ** 2);
+  const centerDist = distanceFromCenter(x, y);
+  const rand = hashRandom(x, y, 77777);
+  const typeRand = hashRandom(x, y, 88888);
 
-  let npcChance: number;
   let npcType: NpcType;
   let basePower: number;
 
-  if (distFromCenter < 20) {
-    npcChance = 0.03;
-    npcType = random < 0.3 ? 'dragon_lair' : random < 0.6 ? 'goblin_outpost' : 'bandit_camp';
-    basePower = npcType === 'dragon_lair' ? 8000 : npcType === 'goblin_outpost' ? 5000 : 3000;
-  } else if (distFromCenter < 35) {
-    npcChance = 0.05;
-    npcType = random < 0.2 ? 'dragon_lair' : random < 0.5 ? 'goblin_outpost' : 'bandit_camp';
-    basePower = npcType === 'dragon_lair' ? 5000 : npcType === 'goblin_outpost' ? 2500 : 1500;
+  if (zone === 'temple') {
+    if (centerDist <= 5) {
+      if (rand > 0.03) return null;
+      npcType = 'dragon_lair';
+      basePower = 15000;
+    } else {
+      if (rand > 0.06) return null;
+      npcType = typeRand < 0.4 ? 'dragon_lair' : typeRand < 0.7 ? 'goblin_outpost' : 'bandit_camp';
+      basePower = npcType === 'dragon_lair' ? 10000 : npcType === 'goblin_outpost' ? 6000 : 4000;
+    }
+  } else if (zone === 'resource') {
+    if (rand > 0.07) return null;
+    npcType = typeRand < 0.2 ? 'dragon_lair' : typeRand < 0.5 ? 'goblin_outpost' : 'bandit_camp';
+    basePower = npcType === 'dragon_lair' ? 6000 : npcType === 'goblin_outpost' ? 3000 : 1500;
   } else {
-    npcChance = 0.06;
-    npcType = random < 0.05 ? 'goblin_outpost' : 'bandit_camp';
-    basePower = npcType === 'goblin_outpost' ? 1000 : 500;
+    if (rand > 0.05) return null;
+    npcType = typeRand < 0.1 ? 'goblin_outpost' : 'bandit_camp';
+    basePower = npcType === 'goblin_outpost' ? 1200 : 500;
   }
 
-  if (random > npcChance) return null;
-
-  const powerVariance = seededRandom(x, y, 54321);
-  const power = Math.floor(basePower * (0.7 + powerVariance * 0.6));
-
-  const troops = {
-    t1: Math.floor(power / 10),
-    t2: Math.floor(power / 50),
-    t3: Math.floor(power / 200),
-  };
-
-  const rewards = {
-    food: Math.floor(power * 2),
-    iron: Math.floor(power * 1.5),
-    gold: Math.floor(power * 0.5),
-    xp: Math.floor(power * 0.3),
-    shardChance: Math.min(0.3, power / 30000),
-  };
-
+  const power = Math.floor(basePower * (0.8 + hashRandom(x, y, 99999) * 0.4));
+  const troops = { t1: Math.floor(power / 10), t2: Math.floor(power / 50), t3: Math.floor(power / 200) };
+  const rewards = { food: Math.floor(power * 2), iron: Math.floor(power * 1.5), gold: Math.floor(power * 0.5), xp: Math.floor(power * 0.3), shardChance: Math.min(0.4, power / 25000) };
   const names = NPC_NAMES[npcType];
-  const nameIndex = Math.floor(seededRandom(x, y, 99999) * names.length);
 
   return {
     type: npcType,
-    name: names[nameIndex],
+    name: names[Math.floor(hashRandom(x, y, 44444) * names.length)],
     coord_x: x,
     coord_y: y,
     power,
@@ -140,131 +157,14 @@ const generateNPC = (x: number, y: number, terrain: string): NPCData | null => {
   };
 };
 
-async function regenerateMap() {
-  console.log('🗺️  Regenerating world map...\n');
-
-  // Get existing player positions to preserve them
-  const playerTiles = await db('map_tiles')
-    .select('x', 'y', 'occupant_id')
-    .whereNotNull('occupant_id');
-  
-  const playerPositions = new Map(playerTiles.map(t => [`${t.x},${t.y}`, t.occupant_id]));
-  console.log(`Found ${playerPositions.size} player positions to preserve`);
-
-  // Clear existing map data
-  console.log('Clearing existing map data...');
-  await db('map_tiles').del();
-  await db('npcs').del();
-  await db('land_parcels').del();
-
-  const tiles: TileData[] = [];
-  const npcs: NPCData[] = [];
-
-  // Generate all tiles and NPCs
-  console.log('Generating terrain...');
-  for (let y = 0; y < MAP_SIZE; y++) {
-    for (let x = 0; x < MAP_SIZE; x++) {
-      const terrain = getTerrainAt(x, y);
-      tiles.push({ x, y, terrain });
-
-      // Don't spawn NPCs on player tiles
-      if (!playerPositions.has(`${x},${y}`)) {
-        const npc = generateNPC(x, y, terrain);
-        if (npc) npcs.push(npc);
-      }
-    }
-  }
-
-  // Insert NPCs first
-  console.log(`Inserting ${npcs.length} NPCs...`);
-  const npcIdMap = new Map<string, number>();
-  
-  if (npcs.length > 0) {
-    const BATCH_SIZE = 500;
-    for (let i = 0; i < npcs.length; i += BATCH_SIZE) {
-      const batch = npcs.slice(i, i + BATCH_SIZE);
-      const inserted = await db('npcs').insert(batch).returning(['id', 'coord_x', 'coord_y']);
-      for (const row of inserted) {
-        npcIdMap.set(`${row.coord_x},${row.coord_y}`, row.id);
-      }
-    }
-  }
-
-  // Prepare tiles with NPC and player references
-  console.log('Inserting map tiles...');
-  const tilesWithRefs = tiles.map((tile) => ({
-    x: tile.x,
-    y: tile.y,
-    terrain: tile.terrain,
-    npc_id: npcIdMap.get(`${tile.x},${tile.y}`) || null,
-    occupant_id: playerPositions.get(`${tile.x},${tile.y}`) || null,
-  }));
-
-  // Insert tiles in batches
-  const BATCH_SIZE = 1000;
-  for (let i = 0; i < tilesWithRefs.length; i += BATCH_SIZE) {
-    const batch = tilesWithRefs.slice(i, i + BATCH_SIZE);
-    await db('map_tiles').insert(batch);
-    
-    if (i % 5000 === 0) {
-      console.log(`  Progress: ${Math.floor((i / tilesWithRefs.length) * 100)}%`);
-    }
-  }
-
-  // Count terrain types
-  const terrainCounts = tiles.reduce((acc, t) => {
-    acc[t.terrain] = (acc[t.terrain] || 0) + 1;
-    return acc;
-  }, {} as Record<string, number>);
-
-  // Count NPC types
-  const npcCounts = npcs.reduce((acc, n) => {
-    acc[n.type] = (acc[n.type] || 0) + 1;
-    return acc;
-  }, {} as Record<string, number>);
-
-  console.log('\n✅ Map regeneration complete!');
-  console.log('');
-  console.log('📊 Terrain Distribution:');
-  console.log(`   🟩 Plains:   ${terrainCounts.plains || 0}`);
-  console.log(`   🟫 Forest:   ${terrainCounts.forest || 0}`);
-  console.log(`   ⬛ Mountain: ${terrainCounts.mountain || 0}`);
-  console.log(`   🟦 Lake:     ${terrainCounts.lake || 0}`);
-  console.log(`   🟨 Resource: ${terrainCounts.resource || 0}`);
-  console.log('');
-  console.log('👹 NPC Distribution:');
-  console.log(`   🏴 Bandit Camps:    ${npcCounts.bandit_camp || 0}`);
-  console.log(`   👺 Goblin Outposts: ${npcCounts.goblin_outpost || 0}`);
-  console.log(`   🐉 Dragon Lairs:    ${npcCounts.dragon_lair || 0}`);
-  console.log(`   Total NPCs: ${npcs.length}`);
-  console.log('');
-  console.log('👤 Player positions preserved:', playerPositions.size);
-
-  // Generate land parcels
-  console.log('\n🏞️ Generating land parcels...');
-  const landParcels = await generateLandParcels();
-  console.log('');
-  console.log('🏞️ Land Parcels:');
-  console.log(`   🌾 Farms:     ${landParcels.farm || 0}`);
-  console.log(`   ⛏️ Mines:     ${landParcels.mine || 0}`);
-  console.log(`   💰 Gold Mines: ${landParcels.goldmine || 0}`);
-  console.log(`   🏰 Forts:     ${landParcels.fort || 0}`);
-  console.log(`   Total Lands: ${Object.values(landParcels).reduce((a, b) => a + b, 0)}`);
-
-  await db.destroy();
-}
-
-/**
- * Generate land parcels across the map, avoiding mountains and water
- */
-async function generateLandParcels(): Promise<Record<string, number>> {
+async function generateLandParcels(tiles: TileData[]): Promise<Record<string, number>> {
   const LAND_TYPES = ['farm', 'mine', 'goldmine', 'fort'] as const;
   
   const LAND_CONFIG = {
-    farm: { count: 12, minSize: 3, maxSize: 5, baseCost: 500, name: 'Fertile Farm' },
-    mine: { count: 10, minSize: 3, maxSize: 4, baseCost: 600, name: 'Iron Mine' },
-    goldmine: { count: 6, minSize: 2, maxSize: 3, baseCost: 1000, name: 'Gold Vein' },
-    fort: { count: 8, minSize: 3, maxSize: 4, baseCost: 800, name: 'Strategic Fort' },
+    farm: { count: 30, minSize: 3, maxSize: 5, baseCost: 500, name: 'Fertile Farm', zones: ['spawn', 'resource'] },
+    mine: { count: 25, minSize: 3, maxSize: 4, baseCost: 600, name: 'Iron Mine', zones: ['spawn', 'resource'] },
+    goldmine: { count: 18, minSize: 2, maxSize: 3, baseCost: 1200, name: 'Gold Vein', zones: ['resource', 'temple'] },
+    fort: { count: 20, minSize: 3, maxSize: 4, baseCost: 800, name: 'Strategic Fort', zones: ['spawn', 'resource', 'temple'] },
   };
 
   const LAND_BONUSES = {
@@ -274,8 +174,10 @@ async function generateLandParcels(): Promise<Record<string, number>> {
     fort: { defense: 0.10 },
   };
 
-  // Blocked terrain types that lands should avoid
-  const BLOCKED_TERRAIN = ['mountain', 'lake'];
+  const terrainMap = new Map<string, { terrain: string; zone: string }>();
+  for (const tile of tiles) {
+    terrainMap.set(`${tile.x},${tile.y}`, { terrain: tile.terrain, zone: tile.zone || 'spawn' });
+  }
 
   interface LandParcelData {
     name: string;
@@ -288,18 +190,16 @@ async function generateLandParcels(): Promise<Record<string, number>> {
     purchase_cost: number;
   }
 
-  // Get all tiles to check terrain
-  const allTiles = await db('map_tiles').select('x', 'y', 'terrain') as { x: number; y: number; terrain: string }[];
-  const terrainMap = new Map<string, string>();
-  for (const tile of allTiles) {
-    terrainMap.set(`${tile.x},${tile.y}`, tile.terrain);
-  }
-
   const parcels: LandParcelData[] = [];
   const occupiedAreas: { minX: number; minY: number; maxX: number; maxY: number }[] = [];
   const counts: Record<string, number> = { farm: 0, mine: 0, goldmine: 0, fort: 0 };
 
-  // Check if an area overlaps with existing parcels
+  let globalSeed = 42;
+  const nextRandom = (): number => {
+    globalSeed = (globalSeed * 1103515245 + 12345) >>> 0;
+    return (globalSeed % 2147483647) / 2147483647;
+  };
+
   const isAreaFree = (minX: number, minY: number, maxX: number, maxY: number): boolean => {
     for (const area of occupiedAreas) {
       if (!(maxX < area.minX || minX > area.maxX || maxY < area.minY || minY > area.maxY)) {
@@ -309,48 +209,49 @@ async function generateLandParcels(): Promise<Record<string, number>> {
     return true;
   };
 
-  // Check if area contains any blocked terrain (mountains, lakes)
   const hasBlockedTerrain = (minX: number, minY: number, maxX: number, maxY: number): boolean => {
     for (let y = minY; y <= maxY; y++) {
       for (let x = minX; x <= maxX; x++) {
-        const terrain = terrainMap.get(`${x},${y}`);
-        if (terrain && BLOCKED_TERRAIN.includes(terrain)) {
-          return true;
-        }
+        const tile = terrainMap.get(`${x},${y}`);
+        if (tile && tile.terrain === 'mountain') return true;
       }
     }
     return false;
   };
 
-  // Seeded random for consistent generation
-  let seed = 42;
-  const landSeededRandom = (): number => {
-    seed = (seed * 1103515245 + 12345) % 2147483647;
-    return seed / 2147483647;
+  const getZoneOfArea = (minX: number, minY: number, maxX: number, maxY: number): string => {
+    const centerX = (minX + maxX) / 2;
+    const centerY = (minY + maxY) / 2;
+    const tile = terrainMap.get(`${Math.floor(centerX)},${Math.floor(centerY)}`);
+    return tile?.zone || 'spawn';
   };
 
-  // Generate parcels for each type
   for (const type of LAND_TYPES) {
     const config = LAND_CONFIG[type];
     let attempts = 0;
-    const maxAttempts = 300; // Increased attempts since we're avoiding terrain
+    const maxAttempts = 1500;
 
     while (counts[type] < config.count && attempts < maxAttempts) {
       attempts++;
 
-      // Random size
-      const sizeX = Math.floor(landSeededRandom() * (config.maxSize - config.minSize + 1)) + config.minSize;
-      const sizeY = Math.floor(landSeededRandom() * (config.maxSize - config.minSize + 1)) + config.minSize;
+      const sizeX = Math.floor(nextRandom() * (config.maxSize - config.minSize + 1)) + config.minSize;
+      const sizeY = Math.floor(nextRandom() * (config.maxSize - config.minSize + 1)) + config.minSize;
 
-      // Random position (avoid edges)
-      const minX = Math.floor(landSeededRandom() * (MAP_SIZE - sizeX - 10)) + 5;
-      const minY = Math.floor(landSeededRandom() * (MAP_SIZE - sizeY - 10)) + 5;
+      const minX = Math.floor(nextRandom() * (MAP_SIZE - sizeX - 12)) + 6;
+      const minY = Math.floor(nextRandom() * (MAP_SIZE - sizeY - 12)) + 6;
       const maxX = minX + sizeX - 1;
       const maxY = minY + sizeY - 1;
 
-      // Check if area is free (with 2-tile buffer) and has no blocked terrain
+      const zone = getZoneOfArea(minX, minY, maxX, maxY);
+      
+      if (!config.zones.includes(zone as any)) continue;
+
       if (isAreaFree(minX - 2, minY - 2, maxX + 2, maxY + 2) && !hasBlockedTerrain(minX, minY, maxX, maxY)) {
-        const cost = Math.floor(config.baseCost * (sizeX * sizeY) / 9); // Normalize to 3x3
+        let costMultiplier = 1;
+        if (zone === 'resource') costMultiplier = 1.3;
+        if (zone === 'temple') costMultiplier = 1.6;
+        
+        const cost = Math.floor(config.baseCost * (sizeX * sizeY) / 9 * costMultiplier);
         
         parcels.push({
           name: `${config.name} #${counts[type] + 1}`,
@@ -369,11 +270,9 @@ async function generateLandParcels(): Promise<Record<string, number>> {
     }
   }
 
-  // Insert all parcels
   if (parcels.length > 0) {
     const inserted = await db('land_parcels').insert(parcels).returning(['id', 'min_x', 'min_y', 'max_x', 'max_y']);
     
-    // Update map_tiles with land_parcel_id references
     for (const parcel of inserted) {
       await db('map_tiles')
         .where('x', '>=', parcel.min_x)
@@ -387,4 +286,135 @@ async function generateLandParcels(): Promise<Record<string, number>> {
   return counts;
 }
 
-regenerateMap().catch(console.error);
+async function regenerateMap(): Promise<void> {
+  console.log('🗺️  Regenerating world map...');
+  console.log('');
+
+  // Get existing player positions to preserve
+  const players = await db('players').select('id', 'coord_x', 'coord_y');
+  console.log(`  Found ${players.length} players to preserve`);
+
+  // Clear existing map data (but not players)
+  console.log('  Clearing existing map data...');
+  await db('map_tiles').del();
+  await db('npcs').del();
+  await db('land_parcels').del();
+
+  // Generate tiles and NPCs
+  console.log('  Generating terrain and zones...');
+  
+  interface TileWithZone extends TileData {
+    zone: string;
+  }
+  
+  const tiles: TileWithZone[] = [];
+  const npcs: NPCData[] = [];
+  const zoneCounts = { temple: 0, resource: 0, spawn: 0 };
+
+  for (let y = 0; y < MAP_SIZE; y++) {
+    for (let x = 0; x < MAP_SIZE; x++) {
+      const { terrain, zone } = getTerrainWithZone(x, y);
+      tiles.push({ x, y, terrain, zone });
+      
+      if (terrain !== 'mountain' && distanceFromEdge(x, y) > 4) {
+        zoneCounts[zone as keyof typeof zoneCounts]++;
+      }
+
+      const npc = generateNPCWithZone(x, y, terrain, zone);
+      if (npc) npcs.push(npc);
+    }
+  }
+
+  // Insert NPCs first
+  console.log(`  Inserting ${npcs.length} NPCs...`);
+  const npcIdMap = new Map<string, number>();
+  
+  if (npcs.length > 0) {
+    const BATCH_SIZE = 500;
+    for (let i = 0; i < npcs.length; i += BATCH_SIZE) {
+      const batch = npcs.slice(i, i + BATCH_SIZE);
+      const inserted = await db('npcs').insert(batch).returning(['id', 'coord_x', 'coord_y']);
+      for (const row of inserted) {
+        npcIdMap.set(`${row.coord_x},${row.coord_y}`, row.id);
+      }
+    }
+  }
+
+  // Insert tiles (without zone - column doesn't exist in DB)
+  console.log('  Inserting map tiles...');
+  const tilesWithNpcs = tiles.map((tile) => ({
+    x: tile.x,
+    y: tile.y,
+    terrain: tile.terrain,
+    npc_id: npcIdMap.get(`${tile.x},${tile.y}`) || null,
+  }));
+
+  const BATCH_SIZE = 1000;
+  for (let i = 0; i < tilesWithNpcs.length; i += BATCH_SIZE) {
+    const batch = tilesWithNpcs.slice(i, i + BATCH_SIZE);
+    await db('map_tiles').insert(batch);
+  }
+
+  // Restore player positions on map (uses occupant_id, not player_id)
+  console.log('  Restoring player positions...');
+  for (const player of players) {
+    await db('map_tiles')
+      .where({ x: player.coord_x, y: player.coord_y })
+      .update({ occupant_id: player.id });
+  }
+
+  // Generate land parcels
+  console.log('  Generating land parcels...');
+  const landCounts = await generateLandParcels(tiles);
+
+  // Stats
+  const terrainCounts = tiles.reduce((acc, t) => {
+    acc[t.terrain] = (acc[t.terrain] || 0) + 1;
+    return acc;
+  }, {} as Record<string, number>);
+
+  const npcCounts = npcs.reduce((acc, n) => {
+    acc[n.type] = (acc[n.type] || 0) + 1;
+    return acc;
+  }, {} as Record<string, number>);
+
+  const totalZoneTiles = zoneCounts.temple + zoneCounts.resource + zoneCounts.spawn;
+  const zonePercentages = {
+    temple: ((zoneCounts.temple / totalZoneTiles) * 100).toFixed(1),
+    resource: ((zoneCounts.resource / totalZoneTiles) * 100).toFixed(1),
+    spawn: ((zoneCounts.spawn / totalZoneTiles) * 100).toFixed(1),
+  };
+
+  console.log('\n✅ Map regeneration complete!');
+  console.log('');
+  console.log('🌍 Zone Distribution:');
+  console.log(`   🏛️  Temple Zone:   ${zoneCounts.temple} tiles (${zonePercentages.temple}%)`);
+  console.log(`   💎 Resource Zone: ${zoneCounts.resource} tiles (${zonePercentages.resource}%)`);
+  console.log(`   🛡️  Spawn Zone:    ${zoneCounts.spawn} tiles (${zonePercentages.spawn}%)`);
+  console.log('');
+  console.log('📊 Terrain Distribution:');
+  console.log(`   🟩 Plains:   ${terrainCounts.plains || 0}`);
+  console.log(`   🌲 Forest:   ${terrainCounts.forest || 0}`);
+  console.log(`   ⛰️  Mountain: ${terrainCounts.mountain || 0}`);
+  console.log(`   💎 Resource: ${terrainCounts.resource || 0}`);
+  console.log('');
+  console.log('👹 NPC Distribution:');
+  console.log(`   🏴 Bandit Camps:    ${npcCounts.bandit_camp || 0}`);
+  console.log(`   👺 Goblin Outposts: ${npcCounts.goblin_outpost || 0}`);
+  console.log(`   🐉 Dragon Lairs:    ${npcCounts.dragon_lair || 0}`);
+  console.log(`   Total NPCs: ${npcs.length}`);
+  console.log('');
+  console.log('🏞️ Land Parcels:');
+  console.log(`   🌾 Farms:     ${landCounts.farm || 0}`);
+  console.log(`   ⛏️  Mines:     ${landCounts.mine || 0}`);
+  console.log(`   💰 Gold Mines: ${landCounts.goldmine || 0}`);
+  console.log(`   🏰 Forts:     ${landCounts.fort || 0}`);
+  console.log(`   Total Lands: ${Object.values(landCounts).reduce((a, b) => a + b, 0)}`);
+
+  await db.destroy();
+}
+
+regenerateMap().catch((err) => {
+  console.error('❌ Map regeneration failed:', err);
+  process.exit(1);
+});

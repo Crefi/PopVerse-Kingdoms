@@ -40,6 +40,7 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
+    "@types/socket.io": "^3.0.1",
     "bullmq": "^5.1.0",
     "canvas": "^3.2.0",
     "cors": "^2.8.5",
@@ -51,6 +52,7 @@
     "jsonwebtoken": "^9.0.2",
     "knex": "^3.1.0",
     "pg": "^8.11.3",
+    "socket.io": "^4.8.3",
     "uuid": "^9.0.1",
     "winston": "^3.11.0",
     "zod": "^3.22.4"

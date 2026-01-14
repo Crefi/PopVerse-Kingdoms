@@ -35,6 +35,7 @@ const configSchema = z.object({
   // Web
   web: z.object({
     port: z.coerce.number().default(3000),
+    enabled: z.coerce.boolean().default(false),
     jwtSecret: z.string().min(1),
     jwtExpiresIn: z.string().default('7d'),
   }),
@@ -74,6 +75,7 @@ function loadConfig() {
     },
     web: {
       port: process.env.WEB_PORT,
+      enabled: process.env.WEB_ENABLED,
       jwtSecret: process.env.JWT_SECRET,
       jwtExpiresIn: process.env.JWT_EXPIRES_IN,
     },

@@ -54,12 +54,15 @@ export class ImageCacheService {
     const terrainHash = options.tiles.map(t => `${t.x},${t.y}:${t.terrain}:${t.npc_id || ''}:${t.occupant_id || ''}`).join('|');
     // Include lands data in hash so cache invalidates when land ownership changes
     const landsHash = (options.lands || []).map(l => `${l.minX},${l.minY}:${l.type}:${l.ownerType || ''}`).join('|');
+    // Include control points in hash so cache invalidates when conquest state changes
+    const controlPointsHash = (options.controlPoints || []).map(cp => `${cp.id}:${cp.x},${cp.y}:${cp.currentOwner || ''}:${cp.ownerFaction || ''}`).join('|');
     const hash = hashOptions({
       centerX: options.centerX,
       centerY: options.centerY,
       viewSize: options.viewSize,
       terrainHash,
       landsHash,
+      controlPointsHash,
     });
     const cacheKey = `img:map:${playerId}:${hash}`;
 
