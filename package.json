@@ -27,6 +27,7 @@
     "docker:prod:down": "docker compose -f docker-compose.prod.yml down",
     "reset": "tsx scripts/reset-dev.ts",
     "reset:full": "tsx scripts/reset-dev.ts && npm run db:seed:dev",
+    "reset:players": "tsx scripts/reset-players.ts",
     "test:players": "tsx scripts/generate-test-players.ts",
     "prepare": "husky install"
   },
