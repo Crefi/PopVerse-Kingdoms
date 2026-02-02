@@ -15,7 +15,7 @@ describe('Player Entity', () => {
     });
 
     it('should apply 24-hour protection shield', () => {
-      const player = Player.create(BigInt(123456789), 'TestPlayer', 'otaku', { x: 25, y: 75 });
+      const player = Player.create(BigInt(123456789), 'TestPlayer', 'anime', { x: 25, y: 75 });
 
       expect(player.isProtected()).toBe(true);
       expect(player.protectionUntil).not.toBeNull();
@@ -29,12 +29,12 @@ describe('Player Entity', () => {
     });
 
     it('should return correct bonus for otaku faction', () => {
-      const player = Player.create(BigInt(2), 'OtakuPlayer', 'otaku', { x: 0, y: 0 });
+      const player = Player.create(BigInt(2), 'OtakuPlayer', 'anime', { x: 0, y: 0 });
       expect(player.getFactionBonus()).toEqual({ marchSpeed: 1.15 });
     });
 
     it('should return correct bonus for arcade faction', () => {
-      const player = Player.create(BigInt(3), 'ArcadePlayer', 'arcade', { x: 0, y: 0 });
+      const player = Player.create(BigInt(3), 'ArcadePlayer', 'gamer', { x: 0, y: 0 });
       expect(player.getFactionBonus()).toEqual({ defense: 1.1 });
     });
   });

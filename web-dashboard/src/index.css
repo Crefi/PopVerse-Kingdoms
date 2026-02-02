@@ -4,8 +4,8 @@
 
 :root {
   --cinema-color: #e74c3c;
-  --otaku-color: #9b59b6;
-  --arcade-color: #3498db;
+  --anime-color: #9b59b6;
+  --gamer-color: #3498db;
 }
 
 body {
@@ -20,9 +20,45 @@ body {
 }
 
 .faction-cinema { color: var(--cinema-color); }
-.faction-otaku { color: var(--otaku-color); }
-.faction-arcade { color: var(--arcade-color); }
+.faction-otaku { color: var(--anime-color); }
+.faction-arcade { color: var(--gamer-color); }
 
 .bg-faction-cinema { background-color: var(--cinema-color); }
-.bg-faction-otaku { background-color: var(--otaku-color); }
-.bg-faction-arcade { background-color: var(--arcade-color); }
+.bg-faction-otaku { background-color: var(--anime-color); }
+.bg-faction-arcade { background-color: var(--gamer-color); }
+
+/* Map zoom slider - modern look */
+input[type="range"].map-zoom-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+}
+input[type="range"].map-zoom-slider::-webkit-slider-runnable-track {
+  height: 6px;
+  background: #4b5563;
+  border-radius: 3px;
+}
+input[type="range"].map-zoom-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #3b82f6;
+  cursor: pointer;
+  margin-top: -5px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+}
+input[type="range"].map-zoom-slider::-moz-range-track {
+  height: 6px;
+  background: #4b5563;
+  border-radius: 3px;
+}
+input[type="range"].map-zoom-slider::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #3b82f6;
+  cursor: pointer;
+  border: none;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+}

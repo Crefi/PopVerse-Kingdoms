@@ -9,6 +9,7 @@ import {
 import type { Command, CommandContext } from '../../../infrastructure/discord/types.js';
 import { rallyService, RALLY_JOIN_WINDOW_MINUTES, RALLY_MAX_PARTICIPANTS } from '../../../domain/services/RallyService.js';
 import { guildService } from '../../../domain/services/GuildService.js';
+import { guildDiscordService } from '../../../infrastructure/discord/GuildDiscordService.js';
 import { getDatabase } from '../../../infrastructure/database/connection.js';
 import type { Faction, TroopTier } from '../../../shared/types/index.js';
 import { MAP_SIZE } from '../../../shared/constants/game.js';
@@ -152,9 +153,20 @@ export const rallyCommand: Command = {
 async function handleStart(
   context: CommandContext,
   player: { id: string; username: string; faction: Faction },
-  _guildId: string
+  guildId: string
 ): Promise<void> {
   const db = getDatabase();
+
+  // Task 7: Only leaders and officers can start rallies
+  const guild = await guildService.getGuildById(guildId);
+  if (guild && !guild.canStartRally(BigInt(player.id))) {
+    await context.interaction.reply({
+      content: '❌ Only guild leaders and officers can start rallies.',
+      ephemeral: true,
+    });
+    return;
+  }
+
   const targetX = context.interaction.options.getInteger('x', true);
   const targetY = context.interaction.options.getInteger('y', true);
   const heroName = context.interaction.options.getString('hero');
@@ -248,6 +260,12 @@ async function handleStart(
   );
 
   await context.interaction.reply({ embeds: [embed], components: [row] });
+
+  // Task 6: Rally call notification to guild channel (message only, no role mention)
+  if (guild?.discordChannelId) {
+    const message = `📢 **Rally call!** **${player.username}** has started a rally against **${rally.targetName}** at (${rally.targetX}, ${rally.targetY}). Join now!`;
+    await guildDiscordService.sendGuildAnnouncement(guild.discordChannelId, message);
+  }
 }
 
 async function handleJoin(

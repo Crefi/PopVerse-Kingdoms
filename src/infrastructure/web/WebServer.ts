@@ -88,6 +88,12 @@ export class WebServer {
       }
     });
 
+    // Serve static assets (hero images, etc.)
+    this.app.use('/assets', express.static('assets', {
+      maxAge: '1d', // Cache for 1 day
+      etag: true,
+    }));
+
     // API routes
     this.app.use('/api/auth', authRouter);
     this.app.use('/api/map', authMiddleware, mapRouter);

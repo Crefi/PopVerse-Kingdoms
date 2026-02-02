@@ -153,6 +153,7 @@ function formatBuildingName(type: string): string {
     vault: '🏦 Vault',
     hospital: '🏥 Hospital',
     academy: '📚 Academy',
+    forge: '🔨 Forge',
   };
   return names[type] || type;
 }

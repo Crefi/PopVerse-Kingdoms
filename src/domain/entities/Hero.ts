@@ -19,6 +19,15 @@ export interface HeroGear {
   armor?: { name: string; power: number };
 }
 
+// New gear system - items by slot
+export interface HeroEquippedItems {
+  head?: bigint;
+  weapon?: bigint;
+  chest?: bigint;
+  boots?: bigint;
+  ring?: bigint;
+}
+
 export interface HeroData {
   id: bigint;
   playerId: bigint;
@@ -147,6 +156,45 @@ export class Hero {
 
   get gear(): HeroGear {
     return { ...this._gear };
+  }
+
+  // Calculate total stats from equipped items
+  getStatsWithItems(equippedItems: Map<string, { primaryValue: number; secondaryValues: Map<string, number> }>): {
+    attack: number;
+    defense: number;
+    speed: number;
+    hp: number;
+  } {
+    let attackBonus = 0;
+    let defenseBonus = 0;
+    let speedBonus = 0;
+    let hpBonus = 0;
+
+    for (const [_, item] of equippedItems) {
+      for (const [stat, value] of item.secondaryValues) {
+        switch (stat) {
+          case 'attack':
+            attackBonus += value;
+            break;
+          case 'defense':
+            defenseBonus += value;
+            break;
+          case 'speed':
+            speedBonus += value;
+            break;
+          case 'hp':
+            hpBonus += value;
+            break;
+        }
+      }
+    }
+
+    return {
+      attack: this.attack + attackBonus,
+      defense: this.defense + defenseBonus,
+      speed: this.speed + speedBonus,
+      hp: this.hp + hpBonus,
+    };
   }
 
   getPower(): number {

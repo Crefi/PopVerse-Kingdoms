@@ -72,14 +72,14 @@ export default function Leaderboards() {
 
   const factionColors: Record<string, string> = {
     cinema: 'text-cinema',
-    otaku: 'text-otaku',
-    arcade: 'text-arcade',
+    anime: 'text-otaku',
+    gamer: 'text-arcade',
   };
 
   const factionBgColors: Record<string, string> = {
     cinema: 'bg-cinema/20',
-    otaku: 'bg-otaku/20',
-    arcade: 'bg-arcade/20',
+    anime: 'bg-otaku/20',
+    gamer: 'bg-arcade/20',
   };
 
   const renderRankBadge = (rank: number) => {

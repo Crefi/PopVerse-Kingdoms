@@ -34,7 +34,7 @@ mapRouter.get('/region/:x/:y/:size', async (req: AuthenticatedRequest, res: Resp
   try {
     const x = parseInt(req.params.x);
     const y = parseInt(req.params.y);
-    const size = Math.min(parseInt(req.params.size) || 15, 50); // Max 50x50
+    const size = Math.min(parseInt(req.params.size) || 15, 100); // Max 100x100 to support full map
 
     if (isNaN(x) || isNaN(y) || x < 0 || y < 0 || x >= config.game.mapSize || y >= config.game.mapSize) {
       res.status(400).json({ error: 'Invalid coordinates' });

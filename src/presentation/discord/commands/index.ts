@@ -9,6 +9,7 @@ import { trainCommand } from './train.js';
 import { attackCommand } from './attack.js';
 import { scoutCommand } from './scout.js';
 import { heroesCommand } from './heroes.js';
+import { heroCommand } from './hero.js';
 import { dailyCommand } from './daily.js';
 import { activityCommand } from './activity.js';
 import { tutorialCommand } from './tutorial.js';
@@ -23,6 +24,10 @@ import { teleportCommand } from './teleport.js';
 import { conquestCommand } from './conquest.js';
 import { seasonCommand } from './season.js';
 import { prestigeCommand } from './prestige.js';
+import { gearCommand } from './gear.js';
+import { lootCommand } from './loot.js';
+import { forgeCommand } from './forge.js';
+import { salvageCommand } from './salvage.js';
 
 export function loadCommands(): Command[] {
   return [
@@ -36,6 +41,7 @@ export function loadCommands(): Command[] {
     attackCommand,
     scoutCommand,
     heroesCommand,
+    heroCommand,
     dailyCommand,
     activityCommand,
     tutorialCommand,
@@ -50,5 +56,9 @@ export function loadCommands(): Command[] {
     conquestCommand,
     seasonCommand,
     prestigeCommand,
+    gearCommand,
+    lootCommand,
+    forgeCommand,
+    salvageCommand,
   ];
 }

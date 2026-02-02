@@ -271,12 +271,13 @@ export async function generateMapEmbed(
   // Build scout recommendations text
   const recommendations: string[] = [];
 
-  // Add NPCs (monsters)
+  // Add NPCs (monsters) - use proper emoji based on type
   if (limitedNpcs.length > 0) {
     for (const npc of limitedNpcs) {
       const dist = getDistance(npc.coord_x, npc.coord_y);
-      const diff = npc.power < 1000 ? '🟢' : npc.power < 3000 ? '🟡' : '🔴';
-      recommendations.push(`${diff} **${npc.name}** at \`${npc.coord_x},${npc.coord_y}\` — ${npc.power.toLocaleString()} pwr • ${dist} tiles`);
+      // Use NPC type emoji instead of difficulty color
+      const npcEmoji = npc.type === 'bandit_camp' ? '🏴' : npc.type === 'goblin_outpost' ? '👺' : '🐉';
+      recommendations.push(`${npcEmoji} **${npc.name}** at \`${npc.coord_x},${npc.coord_y}\` — ${npc.power.toLocaleString()} pwr • ${dist} tiles`);
     }
   }
 
@@ -286,17 +287,17 @@ export async function generateMapEmbed(
       const tile = tiles.find((t) => t.occupant_id === p.id.toString());
       if (tile) {
         const dist = getDistance(tile.x, tile.y);
-        const factionEmoji = p.faction === 'cinema' ? '🎬' : p.faction === 'otaku' ? '⚔️' : '🎮';
+        const factionEmoji = p.faction === 'cinema' ? '🎬' : p.faction === 'anime' ? '⚔️' : '🎮';
         recommendations.push(`${factionEmoji} **${p.username}** at \`${tile.x},${tile.y}\` — Player • ${dist} tiles`);
       }
     }
   }
 
-  // Add resources
+  // Add resources - use mine emoji
   if (resourceTiles.length > 0) {
     for (const tile of resourceTiles) {
       const dist = getDistance(tile.x, tile.y);
-      recommendations.push(`💎 **Gold Mine** at \`${tile.x},${tile.y}\` — Resource • ${dist} tiles`);
+      recommendations.push(`⛏️ **Gold Mine** at \`${tile.x},${tile.y}\` — Resource • ${dist} tiles`);
     }
   }
 
@@ -311,7 +312,7 @@ export async function generateMapEmbed(
       },
       {
         name: '📖 Legend',
-        value: '🏰 Your HQ\n👹 Monster\n🎬⚔️🎮 Players',
+        value: '🏰 Your HQ\n🏴👺🐉 Monsters\n⛏️ Gold Mine\n🎬⚔️🎮 Players',
         inline: true,
       }
     );
@@ -363,13 +364,14 @@ export async function generateMapEmbed(
   // Build select menu options from all recommendations
   const selectOptions: { label: string; description: string; value: string; emoji: string }[] = [];
 
-  // Add NPCs
+  // Add NPCs - use type-specific emoji
   for (const npc of limitedNpcs) {
+    const npcEmoji = npc.type === 'bandit_camp' ? '🏴' : npc.type === 'goblin_outpost' ? '👺' : '🐉';
     selectOptions.push({
       label: `${npc.name} (${npc.coord_x},${npc.coord_y})`,
       description: `${npc.power.toLocaleString()} power • ${getDistance(npc.coord_x, npc.coord_y)} tiles`,
       value: `${npc.coord_x}:${npc.coord_y}`,
-      emoji: '👹',
+      emoji: npcEmoji,
     });
   }
 
@@ -381,18 +383,18 @@ export async function generateMapEmbed(
         label: `${p.username} (${tile.x},${tile.y})`,
         description: `${p.faction} player • ${getDistance(tile.x, tile.y)} tiles`,
         value: `${tile.x}:${tile.y}`,
-        emoji: p.faction === 'cinema' ? '🎬' : p.faction === 'otaku' ? '⚔️' : '🎮',
+        emoji: p.faction === 'cinema' ? '🎬' : p.faction === 'anime' ? '⚔️' : '🎮',
       });
     }
   }
 
-  // Add resources
+  // Add resources - use mine emoji
   for (const tile of resourceTiles) {
     selectOptions.push({
       label: `Gold Mine (${tile.x},${tile.y})`,
       description: `Resource tile • ${getDistance(tile.x, tile.y)} tiles`,
       value: `${tile.x}:${tile.y}`,
-      emoji: '💎',
+      emoji: '⛏️',
     });
   }
 

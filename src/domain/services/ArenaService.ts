@@ -41,15 +41,15 @@ const BOT_HEROES: { name: string; faction: Faction; element: Element; rarity: He
   { name: '[BOT] Neo Anderson', faction: 'cinema', element: 'fire', rarity: 'epic' },
   { name: '[BOT] Sarah Connor', faction: 'cinema', element: 'fire', rarity: 'epic' },
   // Otaku (Wind) bots
-  { name: '[BOT] Sasuke Uchiha', faction: 'otaku', element: 'wind', rarity: 'rare' },
-  { name: '[BOT] Mikasa Ackerman', faction: 'otaku', element: 'wind', rarity: 'rare' },
-  { name: '[BOT] Levi Ackerman', faction: 'otaku', element: 'wind', rarity: 'epic' },
-  { name: '[BOT] Ichigo Kurosaki', faction: 'otaku', element: 'wind', rarity: 'epic' },
+  { name: '[BOT] Sasuke Uchiha', faction: 'anime', element: 'wind', rarity: 'rare' },
+  { name: '[BOT] Mikasa Ackerman', faction: 'anime', element: 'wind', rarity: 'rare' },
+  { name: '[BOT] Levi Ackerman', faction: 'anime', element: 'wind', rarity: 'epic' },
+  { name: '[BOT] Ichigo Kurosaki', faction: 'anime', element: 'wind', rarity: 'epic' },
   // Arcade (Water) bots
-  { name: '[BOT] Link Hero', faction: 'arcade', element: 'water', rarity: 'rare' },
-  { name: '[BOT] Samus Aran', faction: 'arcade', element: 'water', rarity: 'rare' },
-  { name: '[BOT] Cloud Strife', faction: 'arcade', element: 'water', rarity: 'epic' },
-  { name: '[BOT] Solid Snake', faction: 'arcade', element: 'water', rarity: 'epic' },
+  { name: '[BOT] Link Hero', faction: 'gamer', element: 'water', rarity: 'rare' },
+  { name: '[BOT] Samus Aran', faction: 'gamer', element: 'water', rarity: 'rare' },
+  { name: '[BOT] Cloud Strife', faction: 'gamer', element: 'water', rarity: 'epic' },
+  { name: '[BOT] Solid Snake', faction: 'gamer', element: 'water', rarity: 'epic' },
 ];
 
 export interface ArenaOpponent {

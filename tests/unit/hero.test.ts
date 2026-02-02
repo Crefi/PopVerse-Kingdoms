@@ -28,8 +28,8 @@ describe('Hero Entity', () => {
 
     it('should assign correct element based on faction', () => {
       const cinemaHero = Hero.create(BigInt(1), 'Test', 'cinema', 'common');
-      const otakuHero = Hero.create(BigInt(1), 'Test', 'otaku', 'common');
-      const arcadeHero = Hero.create(BigInt(1), 'Test', 'arcade', 'common');
+      const otakuHero = Hero.create(BigInt(1), 'Test', 'anime', 'common');
+      const arcadeHero = Hero.create(BigInt(1), 'Test', 'gamer', 'common');
 
       expect(cinemaHero.element).toBe('fire');
       expect(otakuHero.element).toBe('wind');

@@ -2,14 +2,14 @@ export interface User {
   discordId: string;
   playerId: string;
   username: string;
-  faction: 'cinema' | 'otaku' | 'arcade';
+  faction: 'cinema' | 'anime' | 'gamer';
   avatar?: string;
 }
 
 export interface Player {
   id: string;
   username: string;
-  faction: 'cinema' | 'otaku' | 'arcade';
+  faction: 'cinema' | 'anime' | 'gamer';
   x: number;
   y: number;
   arenaRating: number;

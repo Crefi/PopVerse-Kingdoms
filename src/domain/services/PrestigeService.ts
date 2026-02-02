@@ -317,34 +317,42 @@ export class PrestigeService {
    * Update achievement progress for a player
    */
   async updateAchievementProgress(playerId: string, achievementId: string, progress: number): Promise<boolean> {
-    const achievement = ACHIEVEMENTS.find(a => a.id === achievementId);
-    if (!achievement) return false;
+    try {
+      const achievement = ACHIEVEMENTS.find(a => a.id === achievementId);
+      if (!achievement) {
+        logger.warn(`Achievement not found: ${achievementId}`);
+        return false;
+      }
 
-    const completed = progress >= achievement.requirement.target;
+      const completed = progress >= achievement.requirement.target;
 
-    await this.db('player_achievement_progress')
-      .insert({
-        player_id: playerId,
-        achievement_id: achievementId,
-        progress,
-        completed,
-        completed_at: completed ? new Date() : null,
-        claimed: false,
-      })
-      .onConflict(['player_id', 'achievement_id'])
-      .merge({
-        progress,
-        completed,
-        completed_at: completed ? this.db.raw('COALESCE(completed_at, NOW())') : null,
-      });
+      await this.db('player_achievement_progress')
+        .insert({
+          player_id: playerId,
+          achievement_id: achievementId,
+          progress,
+          completed,
+          completed_at: completed ? new Date() : null,
+          claimed: false,
+        })
+        .onConflict(['player_id', 'achievement_id'])
+        .merge({
+          progress,
+          completed,
+          completed_at: completed ? this.db.raw('COALESCE(player_achievement_progress.completed_at, NOW())') : null,
+        });
 
-    await cacheManager.delete(CACHE_KEYS.PLAYER_ACHIEVEMENTS(playerId));
+      await cacheManager.delete(CACHE_KEYS.PLAYER_ACHIEVEMENTS(playerId));
 
-    if (completed) {
-      logger.info(`Player ${playerId} completed achievement ${achievementId}`);
+      if (completed) {
+        logger.info(`Player ${playerId} completed achievement ${achievementId}`);
+      }
+
+      return completed;
+    } catch (error) {
+      logger.error(`Error updating achievement progress for player ${playerId}, achievement ${achievementId}:`, error);
+      throw error;
     }
-
-    return completed;
   }
 
   /**

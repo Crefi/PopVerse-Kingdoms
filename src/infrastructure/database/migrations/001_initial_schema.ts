@@ -3,7 +3,7 @@ import type { Knex } from 'knex';
 export async function up(knex: Knex): Promise<void> {
   // Create enum types
   await knex.raw(`
-    CREATE TYPE faction_type AS ENUM ('cinema', 'otaku', 'arcade');
+    CREATE TYPE faction_type AS ENUM ('cinema', 'anime', 'gamer');
     CREATE TYPE element_type AS ENUM ('fire', 'wind', 'water');
     CREATE TYPE hero_rarity AS ENUM ('common', 'rare', 'epic', 'legendary');
     CREATE TYPE terrain_type AS ENUM ('plains', 'mountain', 'lake', 'forest', 'resource');

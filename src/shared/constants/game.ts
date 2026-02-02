@@ -122,7 +122,7 @@ export const MAX_MARCH_TIME_MINUTES = 15;
 // NPC constants
 export const NPC_MIN_POWER = 500;
 export const NPC_MAX_POWER = 10000;
-export const NPC_RESPAWN_HOURS = 12;
+export const NPC_RESPAWN_HOURS = 6; // NPCs respawn after 6 hours for active gameplay
 export const STARTER_NPC_COUNT = 5;
 export const STARTER_NPC_RADIUS = 5;
 

@@ -626,8 +626,8 @@ export class SeasonService {
     // Create new starter guilds
     const starterGuilds = [
       { name: 'Cinema Legion', tag: 'CINE', faction: 'cinema' },
-      { name: 'Otaku Alliance', tag: 'OTAK', faction: 'otaku' },
-      { name: 'Arcade Coalition', tag: 'ARCA', faction: 'arcade' },
+      { name: 'Otaku Alliance', tag: 'OTAK', faction: 'anime' },
+      { name: 'Arcade Coalition', tag: 'ARCA', faction: 'gamer' },
     ];
 
     for (const guild of starterGuilds) {

@@ -55,8 +55,8 @@ interface NpcRow {
   created_at: Date;
 }
 
-// NPC respawn time in hours
-const NPC_RESPAWN_HOURS = 12;
+// NPC respawn time in hours (6 hours for active gameplay)
+const NPC_RESPAWN_HOURS = 6;
 
 // Starter NPC guarantee: 5 weak camps within 5 tiles of new players
 const STARTER_NPC_RADIUS = 5;

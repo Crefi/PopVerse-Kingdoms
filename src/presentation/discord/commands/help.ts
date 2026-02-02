@@ -11,13 +11,14 @@ export const helpCommand: Command = {
         .setDescription('Command category to view')
         .setRequired(false)
         .addChoices(
-          { name: 'Getting Started', value: 'start' },
-          { name: 'City & Buildings', value: 'city' },
-          { name: 'Combat & Troops', value: 'combat' },
-          { name: 'Arena', value: 'arena' },
-          { name: 'Guild', value: 'guild' },
-          { name: 'Map & Land', value: 'map' },
-          { name: 'Conquest Events', value: 'conquest' }
+          { name: '🎮 Getting Started', value: 'start' },
+          { name: '🏰 City & Buildings', value: 'city' },
+          { name: '⚔️ Combat & Troops', value: 'combat' },
+          { name: '🦸 Heroes & Items', value: 'heroes' },
+          { name: '🏟️ Arena', value: 'arena' },
+          { name: '🛡️ Guild', value: 'guild' },
+          { name: '🗺️ Map & Land', value: 'map' },
+          { name: '⚔️ Conquest Events', value: 'conquest' }
         )
     ) as SlashCommandBuilder,
 
@@ -35,6 +36,9 @@ export const helpCommand: Command = {
         break;
       case 'combat':
         embed = createCombatEmbed();
+        break;
+      case 'heroes':
+        embed = createHeroesEmbed();
         break;
       case 'arena':
         embed = createArenaEmbed();
@@ -58,55 +62,61 @@ export const helpCommand: Command = {
 
 function createMainHelpEmbed(): EmbedBuilder {
   return new EmbedBuilder()
-    .setTitle('📚 PopVerse Kingdoms')
+    .setTitle('📚 PopVerse Kingdoms — Command Reference')
     .setDescription(
       '**Build your empire, train heroes, and conquer the realm!**\n\n' +
+      'Pick a category below or use **`/help category:[name]`** for a detailed guide.\n\n' +
       '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'
     )
     .addFields(
       {
         name: '🎮 Getting Started',
-        value: '`/begin` Start your journey\n`/tutorial` Learn the basics\n`/daily` Claim rewards',
+        value: '`/begin` · `/tutorial` · `/daily`\nStart the game, learn basics, claim rewards.',
         inline: true,
       },
       {
-        name: '🏰 City Management',
-        value: '`/city` View your city\n`/build` Construct buildings\n`/train` Train troops',
+        name: '🏰 City & Buildings',
+        value: '`/city` · `/build` · `/train`\nManage city, construct buildings, train troops.',
         inline: true,
       },
       {
         name: '⚔️ Combat',
-        value: '`/attack` Attack enemies\n`/scout` Recon locations\n`/heroes` View heroes',
+        value: '`/attack` · `/scout` · `/heroes`\nAttack, scout, view hero roster.',
         inline: true,
       },
       {
-        name: '🗺️ Exploration',
-        value: '`/map` World map\n`/land` Territory\n`/teleport` Relocate',
+        name: '🦸 Heroes & Items',
+        value: '`/hero` · `/gear` · `/forge`\n`/loot` · `/salvage`\nHeroes, equipment, crafting.',
         inline: true,
       },
       {
         name: '🏟️ Arena',
-        value: '`/arena` PvP battles\n`/leaderboard` Rankings',
+        value: '`/arena` · `/leaderboard`\nPvP battles and rankings.',
         inline: true,
       },
       {
-        name: '🛡️ Social',
-        value: '`/guild` Guild system\n`/rally` Group attacks',
+        name: '🛡️ Guild',
+        value: '`/guild` · `/rally`\nGuilds, rallies, build support.',
         inline: true,
       },
       {
-        name: '🏪 Economy',
-        value: '`/shop` Buy items\n`/daily` Daily rewards',
+        name: '🗺️ Map & Land',
+        value: '`/map` · `/land` · `/teleport`\nWorld map, territory, relocate.',
         inline: true,
       },
       {
         name: '⚔️ Conquest',
-        value: '`/conquest` Server events\n`/conquest status` Leaderboard',
+        value: '`/conquest` · `/conquest rally`\nServer events, guild rallies.',
+        inline: true,
+      },
+      {
+        name: '🏪 Other',
+        value: '`/shop` · `/prestige`\nItems, diamonds, prestige.',
         inline: true,
       }
     )
-    .setColor('#5865F2')
-    .setFooter({ text: '💡 Tip: Use /help [category] for detailed info' });
+    .setColor(0x5865f2)
+    .setFooter({ text: '💡 Use the category dropdown in /help for full details on each section' });
 }
 
 function createStartEmbed(): EmbedBuilder {
@@ -121,8 +131,8 @@ function createStartEmbed(): EmbedBuilder {
         name: '1️⃣ Choose Your Faction',
         value: 'Use `/begin` to select from:\n' +
           '> 🔥 **Cinema** — +10% Attack\n' +
-          '> 💨 **Otaku** — +15% March Speed\n' +
-          '> 💧 **Arcade** — +10% Defense',
+          '> 💨 **Anime** — +15% March Speed\n' +
+          '> 💧 **Gamer** — +10% Defense',
         inline: false,
       },
       {
@@ -146,7 +156,7 @@ function createStartEmbed(): EmbedBuilder {
         inline: false,
       }
     )
-    .setColor('#00FF00')
+    .setColor(0x00ff00)
     .setFooter({ text: '🍀 Good luck, Captain!' });
 }
 
@@ -158,23 +168,29 @@ function createCityEmbed(): EmbedBuilder {
       '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'
     )
     .addFields(
-      { name: '`/city`', value: 'View your city status, resources, and buildings', inline: false },
-      { name: '`/build [building]`', value: 'Construct a new building (farm, mine, barracks, vault, hospital)', inline: false },
-      { name: '`/upgrade [building]`', value: 'Upgrade an existing building to increase production', inline: false },
+      { name: '`/city`', value: 'View your city status, resources, and buildings (including upgrade timers).', inline: false },
+      {
+        name: '`/build [building]`',
+        value:
+          'Start building or upgrading. Choose: **HQ**, **Farm**, **Mine**, **Barracks**, **Vault**, **Hospital**, **Academy**, **Forge**.\n' +
+          '🔨 **Guild build support:** If you\'re in a guild, a message appears in your guild channel with a **Help Build** button — guild mates can click it to speed up your construction by **10 minutes** (once per build).',
+        inline: false,
+      },
       {
         name: '📦 Building Types',
         value:
-          '> 🏛️ **HQ** — Unlock features (max 25)\n' +
+          '> 🏛️ **HQ** — Unlock features & slots (max 25)\n' +
           '> 🌾 **Farm** — Produce Food\n' +
           '> ⛏️ **Mine** — Produce Iron\n' +
-          '> 🏪 **Market** — Generate Gold\n' +
           '> ⚔️ **Barracks** — Train troops\n' +
-          '> 🏦 **Vault** — Protect resources\n' +
-          '> 🏥 **Hospital** — Heal wounded troops',
+          '> 🏦 **Vault** — Protect resources (50%)\n' +
+          '> 🏥 **Hospital** — Heal wounded troops\n' +
+          '> 📚 **Academy** — Research\n' +
+          '> 🔨 **Forge** — Craft gear (HQ 10+)',
         inline: false,
       }
     )
-    .setColor('#8B4513');
+    .setColor(0x8b4513);
 }
 
 function createCombatEmbed(): EmbedBuilder {
@@ -185,10 +201,10 @@ function createCombatEmbed(): EmbedBuilder {
       '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'
     )
     .addFields(
-      { name: '`/train tier:[1-4] amount:[qty]`', value: 'Train troops (t1, t2, t3, t4)', inline: false },
-      { name: '`/attack x:[x] y:[y] troops:[qty]`', value: 'Attack a location with your army', inline: false },
-      { name: '`/scout x:[x] y:[y]`', value: 'Scout a location to see enemy power', inline: false },
-      { name: '`/heroes`', value: 'View your hero roster', inline: false },
+      { name: '`/train tier:[1-4] amount:[qty]`', value: 'Train troops (t1–t4). Higher tiers unlock at higher HQ levels.', inline: false },
+      { name: '`/attack x:[x] y:[y] troops:[qty]`', value: 'Attack a tile (player city or NPC).', inline: false },
+      { name: '`/scout x:[x] y:[y]`', value: 'Scout a location to see power and defenders.', inline: false },
+      { name: '`/heroes`', value: 'View your hero roster. Use `/hero` for a single hero.', inline: false },
       {
         name: '🔥 Elemental Advantages',
         value: '> 🔥 Fire beats 💨 Wind (+25% damage)\n> 💨 Wind beats 💧 Water (+25% damage)\n> 💧 Water beats 🔥 Fire (+25% damage)',
@@ -200,7 +216,34 @@ function createCombatEmbed(): EmbedBuilder {
         inline: false,
       }
     )
-    .setColor('#FF0000');
+    .setColor(0xff0000);
+}
+
+function createHeroesEmbed(): EmbedBuilder {
+  return new EmbedBuilder()
+    .setTitle('🦸 Heroes & Items')
+    .setDescription(
+      '**Heroes, equipment, crafting, and loot!**\n\n' +
+      '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'
+    )
+    .addFields(
+      { name: '`/heroes`', value: 'View your hero roster and stats.', inline: false },
+      { name: '`/hero [name]`', value: 'View or manage a specific hero.', inline: false },
+      { name: '`/gear hero:[name]`', value: 'View or equip gear on a hero (weapon, armor, etc.).', inline: false },
+      { name: '`/forge`', value: 'Craft equipment at the Forge (requires Forge building, HQ 10+).', inline: false },
+      { name: '`/loot hero:[name]`', value: 'Loot gear from defeated NPCs and assign to heroes.', inline: false },
+      { name: '`/salvage`', value: 'Salvage unwanted gear for materials.', inline: false },
+      {
+        name: '📌 Tips',
+        value:
+          '> • Defeat NPCs to earn Hero XP and loot\n' +
+          '> • Equip gear to boost hero stats\n' +
+          '> • Use the Forge to craft better equipment\n' +
+          '> • Salvage old gear to fund new crafts',
+        inline: false,
+      }
+    )
+    .setColor(0x9b59b6);
 }
 
 function createArenaEmbed(): EmbedBuilder {
@@ -226,7 +269,7 @@ function createArenaEmbed(): EmbedBuilder {
         inline: false,
       }
     )
-    .setColor('#FFD700');
+    .setColor(0xffd700);
 }
 
 function createGuildEmbed(): EmbedBuilder {
@@ -237,24 +280,30 @@ function createGuildEmbed(): EmbedBuilder {
       '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'
     )
     .addFields(
-      { name: '`/guild create name:[name] tag:[tag]`', value: 'Create a guild (costs 500 Gold)', inline: false },
-      { name: '`/guild join name:[name]`', value: 'Join an existing guild', inline: false },
-      { name: '`/guild info`', value: 'View your guild\'s stats and members', inline: false },
-      { name: '`/guild leave`', value: 'Leave your current guild', inline: false },
-      { name: '`/guild buyland land_id:[id]`', value: 'Purchase land as a guild', inline: false },
-      { name: '`/rally start x:[x] y:[y]`', value: 'Start a rally attack (up to 5 members)', inline: false },
+      { name: '`/guild create name:[name] tag:[tag]`', value: 'Create a guild (costs 500 Gold). Creates a private Discord channel for your guild.', inline: false },
+      { name: '`/guild join name:[name]`', value: 'Join an existing guild (or use an invite).', inline: false },
+      { name: '`/guild info`', value: 'View your guild\'s stats, members, and roles.', inline: false },
+      { name: '`/guild leave`', value: 'Leave your current guild.', inline: false },
+      { name: '`/guild buyland land_id:[id]`', value: 'Purchase a land parcel for the guild (bonuses for all members).', inline: false },
+      { name: '`/rally start x:[x] y:[y]`', value: 'Start a rally attack (up to 5 members). A notification is posted in your guild channel with a **Join Rally** button.', inline: false },
+      {
+        name: '🔨 Guild Build Support',
+        value:
+          'When a guild member uses **`/build`**, a **Guild Build Support** message is posted in your guild\'s Discord channel with a **Help Build** button. Guild mates can click it once per construction to speed it up by **10 minutes** — no need to spam commands!',
+        inline: false,
+      },
       {
         name: '🎁 Guild Benefits',
         value:
           '> • Shared land bonuses for all members\n' +
           '> • Rally attacks combine armies\n' +
-          '> • Help speed up builds (10 min each)\n' +
+          '> • Help speed up each other\'s builds (10 min per help)\n' +
           '> • Daily guild quests with rewards\n' +
           '> • Conquest event bonuses',
         inline: false,
       }
     )
-    .setColor('#9932CC');
+    .setColor(0x9932cc);
 }
 
 function createMapEmbed(): EmbedBuilder {
@@ -286,7 +335,7 @@ function createMapEmbed(): EmbedBuilder {
         inline: false,
       }
     )
-    .setColor('#228B22');
+    .setColor(0x228b22);
 }
 
 
@@ -335,5 +384,5 @@ function createConquestEmbed(): EmbedBuilder {
         inline: false,
       }
     )
-    .setColor('#FF4444');
+    .setColor(0xff4444);
 }

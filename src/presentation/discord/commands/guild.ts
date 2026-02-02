@@ -9,7 +9,7 @@ import type { Command, CommandContext } from '../../../infrastructure/discord/ty
 import { guildService } from '../../../domain/services/GuildService.js';
 import { landService } from '../../../domain/services/LandService.js';
 import { getDatabase } from '../../../infrastructure/database/connection.js';
-import { Guild } from '../../../domain/entities/Guild.js';
+import { Guild, type GuildRole } from '../../../domain/entities/Guild.js';
 import type { Faction } from '../../../shared/types/index.js';
 
 const FACTION_COLORS: Record<string, number> = {
@@ -27,7 +27,9 @@ const FACTION_EMOJIS: Record<string, string> = {
 const ROLE_EMOJIS: Record<string, string> = {
   leader: '👑',
   officer: '⭐',
+  elite: '🛡️',
   member: '👤',
+  recruit: '🌱',
 };
 
 export const guildCommand: Command = {
@@ -80,10 +82,39 @@ export const guildCommand: Command = {
     )
     .addSubcommand(sub =>
       sub.setName('demote')
-        .setDescription('Demote an officer (Leader only)')
+        .setDescription('Demote a member one step (Leader only)')
         .addUserOption(opt =>
           opt.setName('player')
             .setDescription('Player to demote')
+            .setRequired(true)
+        )
+    )
+    .addSubcommand(sub =>
+      sub.setName('setrole')
+        .setDescription('Assign a role to a member (Leader only)')
+        .addUserOption(opt =>
+          opt.setName('player')
+            .setDescription('Player to assign role to')
+            .setRequired(true)
+        )
+        .addStringOption(opt =>
+          opt.setName('role')
+            .setDescription('Role to assign')
+            .setRequired(true)
+            .addChoices(
+              { name: 'Recruit', value: 'recruit' },
+              { name: 'Member', value: 'member' },
+              { name: 'Elite', value: 'elite' },
+              { name: 'Officer', value: 'officer' }
+            )
+        )
+    )
+    .addSubcommand(sub =>
+      sub.setName('transfer')
+        .setDescription('Transfer guild leadership (Leader only)')
+        .addUserOption(opt =>
+          opt.setName('player')
+            .setDescription('New leader')
             .setRequired(true)
         )
     )
@@ -219,6 +250,12 @@ export const guildCommand: Command = {
       case 'demote':
         await handleDemote(context, player);
         break;
+      case 'setrole':
+        await handleSetRole(context, player);
+        break;
+      case 'transfer':
+        await handleTransfer(context, player);
+        break;
       case 'kick':
         await handleKick(context, player);
         break;
@@ -318,9 +355,10 @@ async function handleInfo(
     });
   }
 
-  // Leadership
+  // Leadership (Task 7: roles)
   const leader = members.find(m => m.role === 'leader');
   const officers = members.filter(m => m.role === 'officer');
+  const elites = members.filter(m => m.role === 'elite');
 
   embed.addFields({
     name: '👑 Leader',
@@ -332,6 +370,14 @@ async function handleInfo(
     embed.addFields({
       name: '⭐ Officers',
       value: officers.map(o => `${FACTION_EMOJIS[o.faction]} ${o.username}`).join(', '),
+      inline: true,
+    });
+  }
+
+  if (elites.length > 0) {
+    embed.addFields({
+      name: '🛡️ Elite',
+      value: elites.map(e => `${FACTION_EMOJIS[e.faction]} ${e.username}`).join(', '),
       inline: true,
     });
   }
@@ -452,10 +498,10 @@ async function handleMembers(
     .setDescription(`${members.length}/${Guild.MAX_MEMBERS} members`);
 
   const memberList = members.map(m => {
-    const roleEmoji = ROLE_EMOJIS[m.role];
+    const roleEmoji = ROLE_EMOJIS[m.role] ?? '👤';
     const factionEmoji = FACTION_EMOJIS[m.faction];
     const joinDate = new Date(m.joinedAt).toLocaleDateString();
-    return `${roleEmoji} ${factionEmoji} **${m.username}** - Joined ${joinDate}`;
+    return `${roleEmoji} ${factionEmoji} **${m.username}** (${m.role}) - Joined ${joinDate}`;
   }).join('\n');
 
   embed.addFields({
@@ -537,8 +583,86 @@ async function handleDemote(
 
   const embed = new EmbedBuilder()
     .setTitle('⬇️ Member Demoted')
-    .setDescription(`**${targetPlayer.username}** has been demoted to member.`)
+    .setDescription(`**${targetPlayer.username}** has been demoted one step.`)
     .setColor(0xf39c12);
+
+  await context.interaction.reply({ embeds: [embed] });
+}
+
+async function handleSetRole(
+  context: CommandContext,
+  player: { id: string; faction: Faction }
+): Promise<void> {
+  const targetUser = context.interaction.options.getUser('player', true);
+  const role = context.interaction.options.getString('role', true) as GuildRole;
+  const db = getDatabase();
+
+  const targetPlayer = await db('players')
+    .select('id', 'username')
+    .where('discord_id', targetUser.id)
+    .first() as { id: string; username: string } | undefined;
+
+  if (!targetPlayer) {
+    await context.interaction.reply({
+      content: '❌ Player not found.',
+      ephemeral: true,
+    });
+    return;
+  }
+
+  const result = await guildService.setMemberRole(player.id, targetPlayer.id, role);
+
+  if (!result.success) {
+    await context.interaction.reply({
+      content: `❌ ${result.error}`,
+      ephemeral: true,
+    });
+    return;
+  }
+
+  const roleLabel = role.charAt(0).toUpperCase() + role.slice(1);
+  const embed = new EmbedBuilder()
+    .setTitle('📋 Role Assigned')
+    .setDescription(`**${targetPlayer.username}** is now **${roleLabel}**.`)
+    .setColor(0x2ecc71);
+
+  await context.interaction.reply({ embeds: [embed] });
+}
+
+async function handleTransfer(
+  context: CommandContext,
+  player: { id: string; faction: Faction }
+): Promise<void> {
+  const targetUser = context.interaction.options.getUser('player', true);
+  const db = getDatabase();
+
+  const targetPlayer = await db('players')
+    .select('id', 'username')
+    .where('discord_id', targetUser.id)
+    .first() as { id: string; username: string } | undefined;
+
+  if (!targetPlayer) {
+    await context.interaction.reply({
+      content: '❌ Player not found.',
+      ephemeral: true,
+    });
+    return;
+  }
+
+  const result = await guildService.transferLeadership(player.id, targetPlayer.id);
+
+  if (!result.success) {
+    await context.interaction.reply({
+      content: `❌ ${result.error}`,
+      ephemeral: true,
+    });
+    return;
+  }
+
+  const embed = new EmbedBuilder()
+    .setTitle('👑 Leadership Transferred')
+    .setDescription(`**${targetPlayer.username}** is now the guild leader!`)
+    .setColor(0xffd700);
 
   await context.interaction.reply({ embeds: [embed] });
 }
@@ -997,11 +1121,96 @@ async function handleDecline(
 export async function handleGuildButton(
   interaction: import('discord.js').ButtonInteraction,
   action: string,
-  _params: string[]
+  params: string[]
 ): Promise<void> {
   if (action === 'disband') {
-    await handleDisbandConfirm(interaction, _params[0]);
+    await handleDisbandConfirm(interaction, params[0]);
+    return;
   }
+  if (action === 'build_help') {
+    const buildingId = params[0];
+    const completesAtSec = params[1];
+    if (buildingId && completesAtSec) {
+      await handleGuildBuildHelp(interaction, buildingId, completesAtSec);
+    }
+  }
+}
+
+const GUILD_BUILD_HELP_MINUTES = 10;
+
+/**
+ * Handle "Help Build" button: guild member speeds up a mate's construction by 10 minutes (once per construction).
+ */
+export async function handleGuildBuildHelp(
+  interaction: import('discord.js').ButtonInteraction,
+  buildingIdStr: string,
+  completesAtSecStr: string
+): Promise<void> {
+  const db = getDatabase();
+  const helperDiscordId = interaction.user.id;
+
+  const helper = await db('players').select('id').where('discord_id', helperDiscordId).first() as { id: string } | undefined;
+  if (!helper) {
+    await interaction.reply({ content: '❌ You need to start the game first (`/begin`).', ephemeral: true });
+    return;
+  }
+
+  const building = await db('buildings')
+    .select('id', 'player_id', 'type', 'level', 'upgrade_completes_at')
+    .where('id', buildingIdStr)
+    .first();
+  if (!building) {
+    await interaction.reply({ content: '❌ Building not found.', ephemeral: true });
+    return;
+  }
+
+  const completesAt = new Date(parseInt(completesAtSecStr, 10) * 1000);
+  if (!building.upgrade_completes_at || new Date(building.upgrade_completes_at) <= new Date()) {
+    await interaction.reply({ content: '❌ This construction is already complete.', ephemeral: true });
+    return;
+  }
+
+  const ownerGuild = await guildService.getPlayerGuild(building.player_id);
+  const helperGuild = await guildService.getPlayerGuild(helper.id);
+  if (!ownerGuild || !helperGuild || ownerGuild.id !== helperGuild.id) {
+    await interaction.reply({ content: '❌ You must be in the same guild as the builder to help!', ephemeral: true });
+    return;
+  }
+
+  if (building.player_id === helper.id) {
+    await interaction.reply({ content: '❌ You cannot help your own building.', ephemeral: true });
+    return;
+  }
+
+  const alreadyHelped = await db('guild_build_helps')
+    .where('building_id', buildingIdStr)
+    .where('upgrade_completes_at', completesAt)
+    .where('helper_player_id', helper.id)
+    .first();
+  if (alreadyHelped) {
+    await interaction.reply({ content: '✅ You already helped this construction!', ephemeral: true });
+    return;
+  }
+
+  await db('guild_build_helps').insert({
+    building_id: buildingIdStr,
+    upgrade_completes_at: completesAt,
+    helper_player_id: helper.id,
+  });
+
+  const newCompletesAt = new Date(new Date(building.upgrade_completes_at).getTime() - GUILD_BUILD_HELP_MINUTES * 60 * 1000);
+  await db('buildings').where('id', buildingIdStr).update({ upgrade_completes_at: newCompletesAt });
+
+  const buildingNames: Record<string, string> = {
+    hq: '🏛️ HQ', farm: '🌾 Farm', mine: '⚒️ Mine', barracks: '⚔️ Barracks',
+    vault: '🏦 Vault', hospital: '🏥 Hospital', academy: '📚 Academy', forge: '🔨 Forge',
+  };
+  const name = buildingNames[building.type] || building.type;
+
+  await interaction.reply({
+    content: `🔨 **You helped!** Construction of **${name}** (level ${building.level}) sped up by **${GUILD_BUILD_HELP_MINUTES} minutes**.`,
+    ephemeral: true,
+  });
 }
 
 async function handleDisbandConfirm(

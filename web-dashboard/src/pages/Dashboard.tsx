@@ -54,8 +54,8 @@ export default function Dashboard() {
 
   const factionColors: Record<string, string> = {
     cinema: 'text-cinema',
-    otaku: 'text-otaku',
-    arcade: 'text-arcade',
+    anime: 'text-otaku',
+    gamer: 'text-arcade',
   };
 
   return (

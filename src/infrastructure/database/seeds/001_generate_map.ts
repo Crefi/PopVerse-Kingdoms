@@ -8,7 +8,8 @@ import type { Knex } from 'knex';
  * - RESOURCE ZONE (20%): Higher yields, no shields - radius 15-30 tiles
  * - SPAWN ZONE (70%): Safe plains with shields - radius 30-70 tiles (outer area)
  * 
- * Mountains form natural borders at the map edges
+ * Mountains form natural borders OUTSIDE the map (at edges)
+ * Forests mark zone boundaries with strategic entrances
  * NO water tiles
  */
 export async function seed(knex: Knex): Promise<void> {
@@ -55,6 +56,21 @@ export async function seed(knex: Knex): Promise<void> {
     return (Math.abs(h) % 10000) / 10000;
   };
 
+  // Perlin-like noise for smoother distribution
+  const smoothNoise = (x: number, y: number, scale: number = 10): number => {
+    const sx = x / scale;
+    const sy = y / scale;
+    const v1 = hashRandom(Math.floor(sx), Math.floor(sy), 12345);
+    const v2 = hashRandom(Math.floor(sx) + 1, Math.floor(sy), 12345);
+    const v3 = hashRandom(Math.floor(sx), Math.floor(sy) + 1, 12345);
+    const v4 = hashRandom(Math.floor(sx) + 1, Math.floor(sy) + 1, 12345);
+    const fx = sx - Math.floor(sx);
+    const fy = sy - Math.floor(sy);
+    const i1 = v1 * (1 - fx) + v2 * fx;
+    const i2 = v3 * (1 - fx) + v4 * fx;
+    return i1 * (1 - fy) + i2 * fy;
+  };
+
   // Get distance from map edge (0 = at edge, 50 = at center)
   const distanceFromEdge = (x: number, y: number): number => {
     const distFromLeft = x;
@@ -78,54 +94,90 @@ export async function seed(knex: Knex): Promise<void> {
     return 'spawn';
   };
 
-  // Terrain generation based on zones
+  // Check if position is near zone boundary (for forest walls)
+  const isNearZoneBoundary = (x: number, y: number): { isNear: boolean; isEntrance: boolean } => {
+    const centerDist = distanceFromCenter(x, y);
+    
+    // Check if near temple boundary
+    const nearTempleBoundary = Math.abs(centerDist - TEMPLE_RADIUS) < 1.5;
+    const nearResourceBoundary = Math.abs(centerDist - RESOURCE_RADIUS) < 1.5;
+    
+    if (!nearTempleBoundary && !nearResourceBoundary) {
+      return { isNear: false, isEntrance: false };
+    }
+    
+    // Create entrances at cardinal directions (N, S, E, W) and diagonals (NE, SE, SW, NW)
+    const angle = Math.atan2(y - CENTER, x - CENTER);
+    const angleDegrees = (angle * 180 / Math.PI + 360) % 360;
+    
+    // 8 entrances at 45-degree intervals, each entrance is ~15 degrees wide
+    const entranceAngles = [0, 45, 90, 135, 180, 225, 270, 315];
+    const entranceWidth = 15;
+    
+    const isEntrance = entranceAngles.some(entranceAngle => {
+      const diff = Math.abs(((angleDegrees - entranceAngle + 180) % 360) - 180);
+      return diff < entranceWidth;
+    });
+    
+    return { isNear: true, isEntrance };
+  };
+
+  // Terrain generation based on zones with forest boundaries
   const getTerrainAt = (x: number, y: number): string => {
     const edgeDist = distanceFromEdge(x, y);
     const centerDist = distanceFromCenter(x, y);
     const zone = getZone(x, y);
     const rand = hashRandom(x, y, 12345);
-    const rand2 = hashRandom(x, y, 67890);
-    const forestRand = hashRandom(x, y, 11111);
     
-    // MOUNTAINS: Strong border at map edges (3-4 tiles thick)
-    if (edgeDist <= 2) {
+    // Use smooth noise for more natural resource distribution
+    const resourceNoise = smoothNoise(x, y, 15);
+    const forestNoise = smoothNoise(x, y, 12);
+    
+    // MOUNTAINS: Thick border at map edges (2-3 tiles thick) - visible barrier
+    if (edgeDist === 0) {
       return 'mountain';
     }
-    if (edgeDist === 3) {
-      if (rand < 0.7) return 'mountain';
+    if (edgeDist === 1) {
+      if (rand < 0.8) return 'mountain'; // 80% mountains at edge-1
     }
-    if (edgeDist === 4) {
-      if (rand < 0.4) return 'mountain';
+    if (edgeDist === 2) {
+      if (rand < 0.4) return 'mountain'; // 40% mountains at edge-2
     }
     
-    // Scattered mountains for variety (very rare)
-    if (rand < 0.01) return 'mountain';
+    // FOREST ZONE BOUNDARIES with entrances
+    const boundary = isNearZoneBoundary(x, y);
+    if (boundary.isNear && !boundary.isEntrance) {
+      // Forest wall with some gaps for natural look
+      if (rand > 0.15) return 'forest';
+    }
     
-    // ZONE-BASED TERRAIN GENERATION
+    // Scattered forests for variety (less than before since we have zone boundaries)
+    if (forestNoise > 0.88) return 'forest';
+    
+    // ZONE-BASED TERRAIN GENERATION - Use random for scattered resources (not clustered)
+    // Further reduced resource density by 50%: ~300-400 total resources across the map
+    const resourceRand = hashRandom(x, y, 67890);
+    
     if (zone === 'temple') {
-      // CENTER (Temple Zone): More resources, some forests
+      // CENTER (Temple Zone): Resources scattered randomly
       if (centerDist <= 5) {
         // Inner 5 tiles - mostly plains for Temple area
-        if (rand2 < 0.05) return 'resource';
-        if (forestRand < 0.05) return 'forest';
+        if (resourceRand < 0.04) return 'resource'; // 4% scattered (50% reduction)
         return 'plains';
       }
-      // Rest of temple zone - moderate resources
-      if (rand2 < 0.08) return 'resource';
-      if (forestRand < 0.10) return 'forest';
+      // Rest of temple zone - moderate resources scattered
+      if (resourceRand < 0.05) return 'resource'; // 5% scattered (50% reduction)
       return 'plains';
     }
     
     if (zone === 'resource') {
-      // RESOURCE ZONE: Higher resource density (15% resources!)
-      if (rand2 < 0.15) return 'resource';
-      if (forestRand < 0.12) return 'forest';
+      // RESOURCE ZONE: Higher resource density, randomly scattered
+      if (resourceRand < 0.06) return 'resource'; // 6% scattered (50% reduction)
       return 'plains';
     }
     
-    // SPAWN ZONE: Safe plains, fewer resources
-    if (rand2 < 0.04) return 'resource';
-    if (forestRand < 0.10) return 'forest';
+    // SPAWN ZONE: Fewer resources, randomly scattered
+    if (resourceRand < 0.025) return 'resource'; // 2.5% scattered (50% reduction)
     return 'plains';
   };
 
@@ -136,7 +188,7 @@ export async function seed(knex: Knex): Promise<void> {
     dragon_lair: ['Dragon\'s Den', 'Wyrm Lair', 'Drake Nest', 'Serpent Cave', 'Fire Pit'],
   };
 
-  // Generate NPC based on zone
+  // Generate NPC based on zone with better distribution across all zones
   const generateNPC = (x: number, y: number, terrain: string, zone: string): NPCData | null => {
     if (terrain !== 'plains' && terrain !== 'forest') return null;
 
@@ -144,31 +196,30 @@ export async function seed(knex: Knex): Promise<void> {
     const rand = hashRandom(x, y, 77777);
     const typeRand = hashRandom(x, y, 88888);
 
-    let spawnChance = 0.05; // Base 5% spawn rate
     let npcType: 'bandit_camp' | 'goblin_outpost' | 'dragon_lair';
     let basePower: number;
 
     if (zone === 'temple') {
-      // Temple zone - strongest NPCs, lower spawn rate but higher power
+      // Temple zone - strongest NPCs, better distribution
       if (centerDist <= 5) {
         // Very center - Dragon Lairs (strongest)
-        if (rand > 0.03) return null;
+        if (rand < 0.92) return null;
         npcType = 'dragon_lair';
         basePower = 15000;
       } else {
-        // Outer temple zone
-        if (rand > 0.06) return null;
+        // Outer temple zone - mixed NPCs
+        if (rand < 0.88) return null;
         npcType = typeRand < 0.4 ? 'dragon_lair' : typeRand < 0.7 ? 'goblin_outpost' : 'bandit_camp';
         basePower = npcType === 'dragon_lair' ? 10000 : npcType === 'goblin_outpost' ? 6000 : 4000;
       }
     } else if (zone === 'resource') {
-      // Resource zone - medium NPCs, medium spawn rate
-      if (rand > 0.07) return null;
+      // Resource zone - medium NPCs, good distribution
+      if (rand < 0.90) return null;
       npcType = typeRand < 0.2 ? 'dragon_lair' : typeRand < 0.5 ? 'goblin_outpost' : 'bandit_camp';
       basePower = npcType === 'dragon_lair' ? 6000 : npcType === 'goblin_outpost' ? 3000 : 1500;
     } else {
-      // Spawn zone - weakest NPCs, normal spawn rate (easier for new players)
-      if (rand > 0.05) return null;
+      // Spawn zone - weakest NPCs, evenly distributed (easier for new players)
+      if (rand < 0.92) return null;
       npcType = typeRand < 0.1 ? 'goblin_outpost' : 'bandit_camp';
       basePower = npcType === 'goblin_outpost' ? 1200 : 500;
     }
@@ -216,7 +267,7 @@ export async function seed(knex: Knex): Promise<void> {
       tiles.push({ x, y, terrain, zone });
       
       // Count zones (excluding mountains and edges)
-      if (terrain !== 'mountain' && distanceFromEdge(x, y) > 4) {
+      if (terrain !== 'mountain' && distanceFromEdge(x, y) > 1) {
         zoneCounts[zone as keyof typeof zoneCounts]++;
       }
 
@@ -297,7 +348,6 @@ export async function seed(knex: Knex): Promise<void> {
   console.log(`   🏴 Bandit Camps:    ${npcCounts.bandit_camp || 0}`);
   console.log(`   👺 Goblin Outposts: ${npcCounts.goblin_outpost || 0}`);
   console.log(`   🐉 Dragon Lairs:    ${npcCounts.dragon_lair || 0}`);
-  console.log(`   🐉 Dragon Lairs:    ${npcCounts.dragon_lair || 0}`);
   console.log(`   Total NPCs: ${npcs.length}`);
   console.log('');
   console.log('🏞️ Land Parcels:');
@@ -320,12 +370,12 @@ async function generateLandParcels(
   const CENTER = MAP_SIZE / 2;
   const LAND_TYPES = ['farm', 'mine', 'goldmine', 'fort'] as const;
   
-  // More land parcels with zone-specific distribution
+  // Land parcel configuration - gold mines distributed across all zones
   const LAND_CONFIG = {
-    farm: { count: 30, minSize: 3, maxSize: 5, baseCost: 500, name: 'Fertile Farm', zones: ['spawn', 'resource'] },
-    mine: { count: 25, minSize: 3, maxSize: 4, baseCost: 600, name: 'Iron Mine', zones: ['spawn', 'resource'] },
-    goldmine: { count: 18, minSize: 2, maxSize: 3, baseCost: 1200, name: 'Gold Vein', zones: ['resource', 'temple'] },
-    fort: { count: 20, minSize: 3, maxSize: 4, baseCost: 800, name: 'Strategic Fort', zones: ['spawn', 'resource', 'temple'] },
+    farm: { count: 40, minSize: 3, maxSize: 5, baseCost: 500, name: 'Fertile Farm', zones: ['spawn', 'resource'] },
+    mine: { count: 35, minSize: 3, maxSize: 4, baseCost: 600, name: 'Iron Mine', zones: ['spawn', 'resource'] },
+    goldmine: { count: 25, minSize: 2, maxSize: 3, baseCost: 1200, name: 'Gold Vein', zones: ['spawn', 'resource', 'temple'] }, // Now in all zones
+    fort: { count: 30, minSize: 3, maxSize: 4, baseCost: 800, name: 'Strategic Fort', zones: ['spawn', 'resource', 'temple'] },
   };
 
   const LAND_BONUSES = {
@@ -335,7 +385,7 @@ async function generateLandParcels(
     fort: { defense: 0.10 },
   };
 
-  const BLOCKED_TERRAIN = ['mountain'];
+  const BLOCKED_TERRAIN = ['mountain', 'forest']; // Also avoid forests (zone boundaries)
 
   interface LandParcelData {
     name: string;
@@ -396,11 +446,15 @@ async function generateLandParcels(
     return Math.min(x, MAP_SIZE - 1 - x, y, MAP_SIZE - 1 - y);
   };
 
-  // Generate parcels distributed across appropriate zones
+  // Generate parcels with even distribution across zones
   for (const type of LAND_TYPES) {
     const config = LAND_CONFIG[type];
     let attempts = 0;
-    const maxAttempts = 1500;
+    const maxAttempts = 3000;
+
+    // Track zone distribution to ensure even spread across ALL allowed zones
+    const zoneAttempts: Record<string, number> = { spawn: 0, resource: 0, temple: 0 };
+    const targetPerZone = Math.floor(config.count / config.zones.length);
 
     while (counts[type] < config.count && attempts < maxAttempts) {
       attempts++;
@@ -408,9 +462,9 @@ async function generateLandParcels(
       const sizeX = Math.floor(nextRandom() * (config.maxSize - config.minSize + 1)) + config.minSize;
       const sizeY = Math.floor(nextRandom() * (config.maxSize - config.minSize + 1)) + config.minSize;
 
-      // Avoid mountain borders (tiles 0-5 from edge)
-      const minX = Math.floor(nextRandom() * (MAP_SIZE - sizeX - 12)) + 6;
-      const minY = Math.floor(nextRandom() * (MAP_SIZE - sizeY - 12)) + 6;
+      // Avoid edges and mountains (tiles 0-2 from edge)
+      const minX = Math.floor(nextRandom() * (MAP_SIZE - sizeX - 6)) + 3;
+      const minY = Math.floor(nextRandom() * (MAP_SIZE - sizeY - 6)) + 3;
       const maxX = minX + sizeX - 1;
       const maxY = minY + sizeY - 1;
 
@@ -418,6 +472,10 @@ async function generateLandParcels(
       
       // Check if this land type is allowed in this zone
       if (!config.zones.includes(zone as any)) continue;
+      
+      // Encourage VERY EVEN distribution - enforce strict limits per zone
+      const maxPerZone = targetPerZone + 3; // Allow small variance
+      if (zoneAttempts[zone] >= maxPerZone) continue;
 
       // Check if area is free and has no blocked terrain
       if (isAreaFree(minX - 2, minY - 2, maxX + 2, maxY + 2) && !hasBlockedTerrain(minX, minY, maxX, maxY)) {
@@ -441,6 +499,7 @@ async function generateLandParcels(
 
         occupiedAreas.push({ minX, minY, maxX, maxY });
         counts[type]++;
+        zoneAttempts[zone]++;
       }
     }
   }

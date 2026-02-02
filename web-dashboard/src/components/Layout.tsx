@@ -14,8 +14,8 @@ export default function Layout() {
 
   const factionColors: Record<string, string> = {
     cinema: 'bg-cinema',
-    otaku: 'bg-otaku',
-    arcade: 'bg-arcade',
+    anime: 'bg-otaku',
+    gamer: 'bg-arcade',
   };
 
   return (

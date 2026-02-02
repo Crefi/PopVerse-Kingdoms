@@ -32,8 +32,8 @@ const PALETTE = {
 
 const FACTION_COLORS: Record<Faction, string> = {
   cinema: '#8b3a3a',
-  otaku:  '#2d5c3e',
-  arcade: '#2b4c7e',
+  anime:  '#2d5c3e',
+  gamer: '#2b4c7e',
 };
 
 interface BuildingData {
@@ -225,6 +225,7 @@ function drawBuildingSprite(ctx: CanvasRenderingContext2D, x: number, y: number,
     case 'barracks': drawBarracks(ctx, x, y); break;
     case 'vault': drawVault(ctx, x, y); break;
     case 'academy': drawAcademy(ctx, x, y); break;
+    case 'forge': drawForge(ctx, x, y); break;
     default: drawGenericHouse(ctx, x, y, b.type); break;
   }
 
@@ -335,6 +336,29 @@ function drawAcademy(ctx: CanvasRenderingContext2D, x: number, y: number) {
   ctx.fillStyle = '#5a4530'; ctx.fillRect(x - 8, y + 5, 16, 20);
 }
 
+function drawForge(ctx: CanvasRenderingContext2D, x: number, y: number) {
+  // Base (stone foundation)
+  ctx.fillStyle = '#5a5a5a'; ctx.fillRect(x - 28, y + 15, 56, 10);
+  // Main building (dark stone)
+  ctx.fillStyle = '#4a4a4a'; ctx.fillRect(x - 25, y - 10, 50, 25);
+  // Furnace glow windows
+  ctx.fillStyle = '#ff6600'; ctx.fillRect(x - 18, y - 5, 12, 15);
+  ctx.fillStyle = '#ff8800'; ctx.fillRect(x + 6, y - 5, 12, 15);
+  // Chimney
+  ctx.fillStyle = '#3a3a3a'; ctx.fillRect(x - 8, y - 30, 16, 20);
+  // Smoke effect
+  ctx.fillStyle = 'rgba(100, 100, 100, 0.5)';
+  ctx.beginPath(); ctx.arc(x - 4, y - 35, 6, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(x + 4, y - 40, 5, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(x, y - 45, 4, 0, Math.PI*2); ctx.fill();
+  // Anvil in front
+  ctx.fillStyle = '#6a6a6a'; ctx.fillRect(x - 12, y + 10, 24, 8);
+  ctx.fillStyle = '#8a8a8a'; ctx.fillRect(x - 8, y + 5, 16, 5);
+  // Roof (dark metal)
+  ctx.fillStyle = '#3a3a3a'; ctx.beginPath(); ctx.moveTo(x - 30, y - 10); ctx.lineTo(x, y - 25); ctx.lineTo(x + 30, y - 10); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = '#2a2a2a'; ctx.beginPath(); ctx.moveTo(x, y - 25); ctx.lineTo(x + 30, y - 10); ctx.lineTo(x + 30, y - 7); ctx.lineTo(x, y - 22); ctx.closePath(); ctx.fill();
+}
+
 function drawGenericHouse(ctx: CanvasRenderingContext2D, x: number, y: number, _type: string) {
   ctx.fillStyle = '#9a8a7a'; ctx.fillRect(x - 20, y - 10, 40, 30);
   ctx.fillStyle = '#6a5545'; ctx.beginPath(); ctx.moveTo(x - 25, y - 10); ctx.lineTo(x, y - 28); ctx.lineTo(x + 25, y - 10); ctx.closePath(); ctx.fill();
@@ -344,7 +368,7 @@ function drawGenericHouse(ctx: CanvasRenderingContext2D, x: number, y: number, _
 // ================= UTILS & UI =================
 
 function getBuildingName(type: string): string {
-  const names: Record<string, string> = { farm: 'Farm', mine: 'Mine', barracks: 'Barracks', vault: 'Vault', academy: 'Academy', hospital: 'Hospital' };
+  const names: Record<string, string> = { farm: 'Farm', mine: 'Mine', barracks: 'Barracks', vault: 'Vault', academy: 'Academy', hospital: 'Hospital', forge: 'Forge' };
   return names[type.toLowerCase()] || type.charAt(0).toUpperCase() + type.slice(1);
 }
 

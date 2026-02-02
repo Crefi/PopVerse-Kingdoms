@@ -1,10 +1,12 @@
-import { SlashCommandBuilder, EmbedBuilder, type SlashCommandStringOption } from 'discord.js';
+import { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, type SlashCommandStringOption } from 'discord.js';
 import type { Command, CommandContext } from '../../../infrastructure/discord/types.js';
 import { getDatabase } from '../../../infrastructure/database/connection.js';
 import type { BuildingType, Resources } from '../../../shared/types/index.js';
 import { MAX_HQ_LEVEL, getBuildingSlots } from '../../../shared/constants/game.js';
 import { DailyQuestService } from '../../../domain/services/DailyQuestService.js';
 import { ActivityLogService } from '../../../domain/services/ActivityLogService.js';
+import { guildService } from '../../../domain/services/GuildService.js';
+import { guildDiscordService } from '../../../infrastructure/discord/GuildDiscordService.js';
 import type { Knex } from 'knex';
 
 interface BuildingRow {
@@ -86,6 +88,15 @@ const BUILDING_CONFIG: Record<string, {
     hqRequired: [5, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23],
     description: 'Academy - Research upgrades',
   },
+  forge: {
+    maxLevel: 10,
+    baseCost: { food: 0, iron: 2000, gold: 5000 },
+    baseTime: 120,
+    costMultiplier: 1.8,
+    timeMultiplier: 1.7,
+    hqRequired: [10, 10, 11, 12, 13, 14, 15, 16, 17, 18],
+    description: 'Forge - Craft equipment and salvage items',
+  },
 };
 
 export const buildCommand: Command = {
@@ -104,7 +115,8 @@ export const buildCommand: Command = {
           { name: '⚔️ Barracks', value: 'barracks' },
           { name: '🏦 Vault', value: 'vault' },
           { name: '🏥 Hospital', value: 'hospital' },
-          { name: '📚 Academy', value: 'academy' }
+          { name: '📚 Academy', value: 'academy' },
+          { name: '🔨 Forge', value: 'forge' }
         )
     ) as SlashCommandBuilder,
 
@@ -115,9 +127,9 @@ export const buildCommand: Command = {
     const discordId = context.interaction.user.id;
     const buildingType = context.interaction.options.getString('building', true) as BuildingType;
 
-    // Get player data
+    // Get player data (include username for guild notification)
     const player = await db('players')
-      .select('id', 'resources')
+      .select('id', 'resources', 'username')
       .where('discord_id', discordId)
       .first();
 
@@ -275,6 +287,41 @@ export const buildCommand: Command = {
       .setTimestamp();
 
     await context.interaction.reply({ embeds: [embed] });
+
+    // Guild build support: post notification in guild channel with Help Build button
+    const guild = await guildService.getPlayerGuild(player.id);
+    if (guild?.discordChannelId) {
+      const buildingRow = await db('buildings')
+        .select('id', 'upgrade_completes_at')
+        .where('player_id', player.id)
+        .where('type', buildingType)
+        .first();
+      if (buildingRow?.id && buildingRow.upgrade_completes_at) {
+        const completesAtSec = Math.floor(new Date(buildingRow.upgrade_completes_at).getTime() / 1000);
+        const supportEmbed = new EmbedBuilder()
+          .setTitle('🔨 Guild Build Support')
+          .setDescription(`**${player.username}** started building and could use your help!`)
+          .setColor(0xf39c12)
+          .addFields(
+            { name: '🏗️ Building', value: formatBuildingName(buildingType), inline: true },
+            { name: '📊 Level', value: `${currentLevel} → **${nextLevel}**`, inline: true },
+            { name: '⏱️ Completes', value: `<t:${completesAtSec}:R>`, inline: true }
+          )
+          .setFooter({ text: 'Each guild member can help once (saves 10 min)!' })
+          .setTimestamp();
+        const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
+          new ButtonBuilder()
+            .setCustomId(`guild_build_help:${buildingRow.id}:${completesAtSec}`)
+            .setLabel('Help Build')
+            .setStyle(ButtonStyle.Primary)
+            .setEmoji('🔨')
+        );
+        await guildDiscordService.sendGuildMessage(
+          guild.discordChannelId,
+          { embeds: [supportEmbed], components: [row] }
+        );
+      }
+    }
   },
 };
 
@@ -300,6 +347,7 @@ function formatBuildingName(type: string): string {
     vault: '🏦 Vault',
     hospital: '🏥 Hospital',
     academy: '📚 Academy',
+    forge: '🔨 Forge',
   };
   return names[type] || type;
 }

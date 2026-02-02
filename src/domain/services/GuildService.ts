@@ -1,6 +1,8 @@
 import { getDatabase } from '../../infrastructure/database/connection.js';
 import { Guild, GuildMember, GuildRole } from '../entities/Guild.js';
 import type { Faction, Resources } from '../../shared/types/index.js';
+import { guildDiscordService } from '../../infrastructure/discord/GuildDiscordService.js';
+import logger from '../../shared/utils/logger.js';
 
 interface GuildRow {
   id: string;
@@ -8,6 +10,7 @@ interface GuildRow {
   tag: string;
   leader_id: string | null;
   discord_channel_id: string | null;
+  discord_role_id: string | null;
   treasury: string | Resources;
   is_starter_guild: boolean;
   created_at: Date;
@@ -126,12 +129,17 @@ export class GuildService {
           }),
         });
 
+      // Create Discord role and channel
+      const discordIntegration = await guildDiscordService.createGuildDiscordIntegration(name, tag.toUpperCase());
+
       // Create guild
       const [guild] = await trx('guilds')
         .insert({
           name,
           tag: tag.toUpperCase(),
           leader_id: leaderId,
+          discord_channel_id: discordIntegration.channelId,
+          discord_role_id: discordIntegration.roleId,
           treasury: JSON.stringify({ food: 0, iron: 0, gold: 0 }),
           is_starter_guild: false,
         })
@@ -143,6 +151,18 @@ export class GuildService {
         player_id: leaderId,
         role: 'leader',
       });
+
+      // Add leader to Discord role
+      if (discordIntegration.roleId) {
+        const leaderPlayer = await trx('players')
+          .select('discord_id')
+          .where('id', leaderId)
+          .first() as { discord_id: string } | undefined;
+
+        if (leaderPlayer?.discord_id) {
+          await guildDiscordService.addPlayerToGuildRole(leaderPlayer.discord_id, discordIntegration.roleId);
+        }
+      }
 
       return guild.id;
     });
@@ -226,12 +246,39 @@ export class GuildService {
       return { success: false, error: 'This guild is full.' };
     }
 
-    // Add member
+    // Add member as Recruit (Task 7: roles – new members start as Recruit)
     await db('guild_members').insert({
       guild_id: guildId,
       player_id: playerId,
-      role: 'member',
+      role: 'recruit',
     });
+
+    // Add player to Discord role
+    if (guild.discordRoleId) {
+      const player = await db('players')
+        .select('discord_id')
+        .where('id', playerId)
+        .first() as { discord_id: string } | undefined;
+
+      if (player?.discord_id) {
+        await guildDiscordService.addPlayerToGuildRole(player.discord_id, guild.discordRoleId);
+      }
+    }
+
+    // Send announcement to guild channel
+    if (guild.discordChannelId) {
+      const player = await db('players')
+        .select('username')
+        .where('id', playerId)
+        .first() as { username: string } | undefined;
+
+      if (player) {
+        await guildDiscordService.sendGuildAnnouncement(
+          guild.discordChannelId,
+          `🎉 **${player.username}** has joined the guild!`
+        );
+      }
+    }
 
     return { success: true };
   }
@@ -256,9 +303,39 @@ export class GuildService {
       return { success: false, error: 'Leaders cannot leave. Transfer leadership or disband the guild.' };
     }
 
+    // Get guild info for Discord integration
+    const guild = await this.getGuildById(membership.guild_id);
+
     await db('guild_members')
       .where('player_id', playerId)
       .delete();
+
+    // Remove player from Discord role
+    if (guild?.discordRoleId) {
+      const player = await db('players')
+        .select('discord_id')
+        .where('id', playerId)
+        .first() as { discord_id: string } | undefined;
+
+      if (player?.discord_id) {
+        await guildDiscordService.removePlayerFromGuildRole(player.discord_id, guild.discordRoleId);
+      }
+    }
+
+    // Send announcement to guild channel
+    if (guild?.discordChannelId) {
+      const player = await db('players')
+        .select('username')
+        .where('id', playerId)
+        .first() as { username: string } | undefined;
+
+      if (player) {
+        await guildDiscordService.sendGuildAnnouncement(
+          guild.discordChannelId,
+          `👋 **${player.username}** has left the guild.`
+        );
+      }
+    }
 
     return { success: true };
   }
@@ -279,7 +356,8 @@ export class GuildService {
       return { success: false, error: 'You are not in a guild.' };
     }
 
-    if (kickerMembership.role !== 'leader' && kickerMembership.role !== 'officer') {
+    const canKick = kickerMembership.role === 'leader' || kickerMembership.role === 'officer';
+    if (!canKick) {
       return { success: false, error: 'Only leaders and officers can kick members.' };
     }
 
@@ -298,14 +376,44 @@ export class GuildService {
       return { success: false, error: 'Cannot kick the guild leader.' };
     }
 
-    // Officers can only kick members, not other officers
+    // Officers cannot kick other officers (leader already excluded above)
     if (kickerMembership.role === 'officer' && targetMembership.role === 'officer') {
       return { success: false, error: 'Officers cannot kick other officers.' };
     }
 
+    // Get guild info for Discord integration
+    const guild = await this.getGuildById(kickerMembership.guild_id);
+
     await db('guild_members')
       .where('player_id', targetId)
       .delete();
+
+    // Remove player from Discord role
+    if (guild?.discordRoleId) {
+      const player = await db('players')
+        .select('discord_id')
+        .where('id', targetId)
+        .first() as { discord_id: string } | undefined;
+
+      if (player?.discord_id) {
+        await guildDiscordService.removePlayerFromGuildRole(player.discord_id, guild.discordRoleId);
+      }
+    }
+
+    // Send announcement to guild channel
+    if (guild?.discordChannelId) {
+      const player = await db('players')
+        .select('username')
+        .where('id', targetId)
+        .first() as { username: string } | undefined;
+
+      if (player) {
+        await guildDiscordService.sendGuildAnnouncement(
+          guild.discordChannelId,
+          `🚪 **${player.username}** has been kicked from the guild.`
+        );
+      }
+    }
 
     return { success: true };
   }
@@ -338,21 +446,22 @@ export class GuildService {
       return { success: false, error: 'Cannot promote the leader.' };
     }
 
-    const newRole: GuildRole = targetMembership.role === 'member' ? 'officer' : 'leader';
+    const roleOrder: GuildRole[] = ['recruit', 'member', 'elite', 'officer', 'leader'];
+    const currentIdx = roleOrder.indexOf(targetMembership.role);
+    if (currentIdx < 0 || currentIdx >= roleOrder.length - 1) {
+      return { success: false, error: 'Cannot promote further.' };
+    }
+    const newRole = roleOrder[currentIdx + 1];
 
     await db.transaction(async (trx) => {
       if (newRole === 'leader') {
-        // Demote current leader to officer
         await trx('guild_members')
           .where('player_id', promoterId)
           .update({ role: 'officer' });
-
-        // Update guild leader
         await trx('guilds')
           .where('id', promoterMembership.guild_id)
           .update({ leader_id: targetId });
       }
-
       await trx('guild_members')
         .where('player_id', targetId)
         .update({ role: newRole });
@@ -385,13 +494,103 @@ export class GuildService {
       return { success: false, error: 'Player is not in your guild.' };
     }
 
-    if (targetMembership.role !== 'officer') {
-      return { success: false, error: 'Can only demote officers.' };
+    const roleOrder: GuildRole[] = ['recruit', 'member', 'elite', 'officer', 'leader'];
+    const currentIdx = roleOrder.indexOf(targetMembership.role);
+    if (currentIdx <= 0 || targetMembership.role === 'leader') {
+      return { success: false, error: 'Can only demote officer, elite, or member (one step).' };
+    }
+    const newRole = roleOrder[currentIdx - 1];
+
+    await db('guild_members')
+      .where('player_id', targetId)
+      .update({ role: newRole });
+
+    return { success: true };
+  }
+
+  /**
+   * Leader assigns a member to a specific role (Task 7: roles and permissions).
+   */
+  async setMemberRole(assignerId: string, targetId: string, newRole: GuildRole): Promise<GuildJoinResult> {
+    const db = getDatabase();
+
+    const assignerMembership = await db('guild_members')
+      .select('guild_id', 'role')
+      .where('player_id', assignerId)
+      .first() as { guild_id: string; role: GuildRole } | undefined;
+
+    if (!assignerMembership || assignerMembership.role !== 'leader') {
+      return { success: false, error: 'Only the guild leader can assign roles.' };
+    }
+
+    if (newRole === 'leader') {
+      return { success: false, error: 'Use promote to transfer leadership.' };
+    }
+
+    const validRoles: GuildRole[] = ['recruit', 'member', 'elite', 'officer'];
+    if (!validRoles.includes(newRole)) {
+      return { success: false, error: 'Invalid role.' };
+    }
+
+    const targetMembership = await db('guild_members')
+      .select('guild_id', 'role')
+      .where('player_id', targetId)
+      .first() as { guild_id: string; role: GuildRole } | undefined;
+
+    if (!targetMembership || targetMembership.guild_id !== assignerMembership.guild_id) {
+      return { success: false, error: 'Player is not in your guild.' };
+    }
+
+    if (targetMembership.role === 'leader') {
+      return { success: false, error: 'Cannot change the leader\'s role this way. Transfer leadership first.' };
     }
 
     await db('guild_members')
       .where('player_id', targetId)
-      .update({ role: 'member' });
+      .update({ role: newRole });
+
+    return { success: true };
+  }
+
+  /**
+   * Leader transfers leadership to another member.
+   */
+  async transferLeadership(leaderId: string, newLeaderId: string): Promise<GuildJoinResult> {
+    const db = getDatabase();
+
+    const leaderMembership = await db('guild_members')
+      .select('guild_id', 'role')
+      .where('player_id', leaderId)
+      .first() as { guild_id: string; role: GuildRole } | undefined;
+
+    if (!leaderMembership || leaderMembership.role !== 'leader') {
+      return { success: false, error: 'Only the guild leader can transfer leadership.' };
+    }
+
+    const newLeaderMembership = await db('guild_members')
+      .select('guild_id')
+      .where('player_id', newLeaderId)
+      .first() as { guild_id: string } | undefined;
+
+    if (!newLeaderMembership || newLeaderMembership.guild_id !== leaderMembership.guild_id) {
+      return { success: false, error: 'Target is not in your guild.' };
+    }
+
+    if (leaderId === newLeaderId) {
+      return { success: false, error: 'You are already the leader.' };
+    }
+
+    await db.transaction(async (trx) => {
+      await trx('guild_members')
+        .where('player_id', leaderId)
+        .update({ role: 'officer' });
+      await trx('guild_members')
+        .where('player_id', newLeaderId)
+        .update({ role: 'leader' });
+      await trx('guilds')
+        .where('id', leaderMembership.guild_id)
+        .update({ leader_id: newLeaderId });
+    });
 
     return { success: true };
   }
@@ -421,6 +620,9 @@ export class GuildService {
       return { success: false, error: 'Starter guilds cannot be disbanded.' };
     }
 
+    // Get guild info for Discord integration
+    const guildInfo = await this.getGuildById(membership.guild_id);
+
     await db.transaction(async (trx) => {
       // Remove all members
       await trx('guild_members')
@@ -437,6 +639,14 @@ export class GuildService {
         .where('id', membership.guild_id)
         .delete();
     });
+
+    // Delete Discord role and channel
+    if (guildInfo) {
+      await guildDiscordService.deleteGuildDiscordIntegration(
+        guildInfo.discordRoleId,
+        guildInfo.discordChannelId
+      );
+    }
 
     return { success: true };
   }
@@ -545,7 +755,10 @@ export class GuildService {
         CASE guild_members.role 
           WHEN 'leader' THEN 1 
           WHEN 'officer' THEN 2 
-          ELSE 3 
+          WHEN 'elite' THEN 3 
+          WHEN 'member' THEN 4 
+          WHEN 'recruit' THEN 5 
+          ELSE 6 
         END
       `) as (GuildMemberRow & { username: string; faction: Faction })[];
 
@@ -638,6 +851,7 @@ export class GuildService {
       tag: row.tag,
       leaderId: row.leader_id ? BigInt(row.leader_id) : null,
       discordChannelId: row.discord_channel_id,
+      discordRoleId: row.discord_role_id,
       treasury: typeof row.treasury === 'string' ? JSON.parse(row.treasury) : row.treasury,
       isStarterGuild: row.is_starter_guild,
       createdAt: row.created_at,
@@ -724,7 +938,7 @@ export class GuildService {
       return { success: false, error: 'You are not in a guild.' };
     }
 
-    if (inviterMembership.role === 'member') {
+    if (inviterMembership.role !== 'leader' && inviterMembership.role !== 'officer') {
       return { success: false, error: 'Only leaders and officers can send invitations.' };
     }
 
@@ -839,11 +1053,11 @@ export class GuildService {
     }
 
     await db.transaction(async (trx) => {
-      // Add member
+      // Add member as Recruit (Task 7)
       await trx('guild_members').insert({
         guild_id: invitation.guild_id,
         player_id: playerId,
-        role: 'member',
+        role: 'recruit',
       });
 
       // Delete invitation
@@ -852,6 +1066,29 @@ export class GuildService {
       // Delete all other invitations for this player
       await trx('guild_invitations').where('player_id', playerId).delete();
     });
+
+    // Add player to Discord role and send announcement (Task 6: communication)
+    if (guild.discordRoleId) {
+      const playerRow = await db('players')
+        .select('discord_id')
+        .where('id', playerId)
+        .first() as { discord_id: string } | undefined;
+      if (playerRow?.discord_id) {
+        await guildDiscordService.addPlayerToGuildRole(playerRow.discord_id, guild.discordRoleId);
+      }
+    }
+    if (guild.discordChannelId) {
+      const playerRow = await db('players')
+        .select('username')
+        .where('id', playerId)
+        .first() as { username: string } | undefined;
+      if (playerRow) {
+        await guildDiscordService.sendGuildAnnouncement(
+          guild.discordChannelId,
+          `🎉 **${playerRow.username}** has joined the guild!`
+        );
+      }
+    }
 
     return { success: true };
   }
@@ -910,8 +1147,8 @@ export class GuildService {
 // Starter guild names by faction
 const STARTER_GUILDS: Record<Faction, { name: string; tag: string }> = {
   cinema: { name: 'Cinema Legion', tag: 'CINE' },
-  otaku: { name: 'Otaku Alliance', tag: 'OTAK' },
-  arcade: { name: 'Arcade Coalition', tag: 'ARCA' },
+  anime: { name: 'Otaku Alliance', tag: 'OTAK' },
+  gamer: { name: 'Arcade Coalition', tag: 'ARCA' },
 };
 
 export interface InvitationInfo {

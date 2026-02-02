@@ -103,7 +103,7 @@ export class CombatService {
     
     const defenderArmy = this.buildArmy(
       context.defender.playerId ?? BigInt(0),
-      context.defender.faction ?? 'arcade',
+      context.defender.faction ?? 'gamer',
       context.defender.hero,
       context.defender.troops
     );
@@ -442,7 +442,7 @@ export class CombatService {
     // Ensure targetTroops is an array
     const troopsArray = Array.isArray(targetTroops) ? targetTroops : [];
     
-    const army = this.buildArmy(BigInt(0), targetFaction ?? 'arcade', targetHero, troopsArray);
+    const army = this.buildArmy(BigInt(0), targetFaction ?? 'gamer', targetHero, troopsArray);
     const power = this.calculateArmyPower(army, 1.0);
 
     // Show approximate troop counts

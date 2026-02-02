@@ -24,8 +24,8 @@ const TERRAIN_COLORS: Record<string, [string, string]> = {
 
 const FACTION_COLORS: Record<Faction, string> = {
   cinema: '#e74c3c',
-  otaku:  '#2ecc71',
-  arcade: '#3498db',
+  anime:  '#2ecc71',
+  gamer: '#3498db',
 };
 
 interface TileData {
@@ -192,8 +192,8 @@ function drawControlPoint(
   if (cp.ownerFaction) {
     const factionColors: Record<string, [string, string]> = {
       cinema: ['#e74c3c', 'rgba(231, 76, 60, 0.4)'],
-      otaku: ['#2ecc71', 'rgba(46, 204, 113, 0.4)'],
-      arcade: ['#3498db', 'rgba(52, 152, 219, 0.4)'],
+      anime: ['#2ecc71', 'rgba(46, 204, 113, 0.4)'],
+      gamer: ['#3498db', 'rgba(52, 152, 219, 0.4)'],
     };
     const colors = factionColors[cp.ownerFaction];
     if (colors) {
@@ -511,10 +511,10 @@ function drawFactionUnit(ctx: CanvasRenderingContext2D, x: number, y: number, s:
   if (faction === 'cinema') {
     // Cinema: Film camera / clapperboard style
     drawCinemaUnit(ctx, x, y, iconSize, color);
-  } else if (faction === 'otaku') {
+  } else if (faction === 'anime') {
     // Otaku: Ninja/anime style warrior
     drawOtakuUnit(ctx, x, y, iconSize, color);
-  } else if (faction === 'arcade') {
+  } else if (faction === 'gamer') {
     // Arcade: Pixel knight / game character
     drawArcadeUnit(ctx, x, y, iconSize, color);
   } else {

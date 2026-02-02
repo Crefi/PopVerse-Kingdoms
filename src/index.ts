@@ -84,6 +84,20 @@ async function bootstrap(): Promise<void> {
     }
   }, 5 * 60 * 1000);
 
+  // Set up periodic crafting completion check (every minute)
+  setInterval(async () => {
+    try {
+      const { CraftingService } = await import('./domain/services/CraftingService.js');
+      const craftingService = new CraftingService();
+      const completed = await craftingService.completeReadyJobs();
+      if (completed > 0) {
+        logger.debug(`Completed ${completed} crafting jobs`);
+      }
+    } catch (error) {
+      logger.warn('Failed to complete crafting jobs:', error);
+    }
+  }, 60 * 1000);
+
   // Start web dashboard if enabled
   if (config.web.enabled) {
     try {

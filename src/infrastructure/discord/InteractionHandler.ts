@@ -3,7 +3,7 @@ import type { DiscordClient } from './DiscordClient.js';
 import { CommandRouter } from './CommandRouter.js';
 import { handleMapButton, handleMapSelectMenu } from '../../presentation/discord/commands/map.js';
 import { handleArenaButton, handleArenaSelectMenu } from '../../presentation/discord/commands/arena.js';
-import { handleGuildButton } from '../../presentation/discord/commands/guild.js';
+import { handleGuildButton, handleGuildBuildHelp } from '../../presentation/discord/commands/guild.js';
 import { handleRallyButton } from '../../presentation/discord/commands/rally.js';
 import { handleGuildQuestButton } from '../../presentation/discord/commands/guildquests.js';
 import { handleLandButton } from '../../presentation/discord/commands/land.js';
@@ -103,13 +103,12 @@ export class InteractionHandler {
       case 'tutorial':
         // Tutorial navigation buttons are handled by awaitMessageComponent in tutorial.ts
         return;
-      case 'guild_help':
-        // Handle guild help button
-        await interaction.reply({
-          content: '🔨 Guild help feature coming soon!',
-          ephemeral: true,
-        });
-        break;
+      case 'guild_build_help':
+        // Help Build button from guild channel notification (params: buildingId, completesAtSec)
+        if (params.length >= 2) {
+          await handleGuildBuildHelp(interaction, params[0], params[1]);
+        }
+        return;
       case 'rally_join':
         // Handle rally join button
         await interaction.reply({
@@ -124,7 +123,7 @@ export class InteractionHandler {
         }
         return;
       case 'guild':
-        // Guild management buttons (disband confirmation)
+        // Guild management buttons (disband confirmation, etc.)
         if (params.length >= 1) {
           await handleGuildButton(interaction, params[0], params.slice(1));
         }

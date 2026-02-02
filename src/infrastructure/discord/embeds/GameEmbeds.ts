@@ -1,23 +1,24 @@
 import { EmbedBuilder, type ColorResolvable } from 'discord.js';
 import type { Faction, Resources } from '../../../shared/types/index.js';
+import { getHeroImageUrl } from '../../database/seeds/002_hero_templates.js';
 
 // Faction colors - vibrant and distinct
 const FACTION_COLORS: Record<Faction, ColorResolvable> = {
   cinema: '#E74C3C',  // Vibrant Red
-  otaku: '#2ECC71',   // Emerald Green
-  arcade: '#3498DB',  // Bright Blue
+  anime: '#2ECC71',   // Emerald Green
+  gamer: '#3498DB',  // Bright Blue
 };
 
 const FACTION_EMOJIS: Record<Faction, string> = {
   cinema: '🎬',
-  otaku: '⚔️',
-  arcade: '🎮',
+  anime: '⚔️',
+  gamer: '🎮',
 };
 
 const FACTION_NAMES: Record<Faction, string> = {
   cinema: 'Cinema',
-  otaku: 'Otaku',
-  arcade: 'Arcade',
+  anime: 'Otaku',
+  gamer: 'Arcade',
 };
 
 export class GameEmbeds {
@@ -53,18 +54,18 @@ export class GameEmbeds {
   static factionSelected(faction: Faction, heroName: string, coordinates: { x: number; y: number }): EmbedBuilder {
     const bonuses: Record<Faction, string> = {
       cinema: '+10% Attack to all armies',
-      otaku: '+15% March Speed',
-      arcade: '+10% Defense to all armies',
+      anime: '+15% March Speed',
+      gamer: '+10% Defense to all armies',
     };
 
-    return new EmbedBuilder()
+    const embed = new EmbedBuilder()
       .setTitle(`${FACTION_EMOJIS[faction]} Welcome to ${FACTION_NAMES[faction]}!`)
-      .setDescription('🎉 Registration Complete!')
+      .setDescription(`🎉 **Registration Complete!**\n\nYou've received your starter hero and established your base!`)
       .addFields(
         {
           name: '🦸 Your Starter Hero',
-          value: `**${heroName}**\nReady to fight for your cause!`,
-          inline: true,
+          value: `**${heroName}**\nA legendary warrior ready to fight for your cause!`,
+          inline: false,
         },
         {
           name: '📍 City Location',
@@ -83,7 +84,16 @@ export class GameEmbeds {
         }
       )
       .setColor(FACTION_COLORS[faction])
-      .setFooter({ text: 'Use /help to see all commands • Good luck, Captain!' });
+      .setFooter({ text: 'Use /tutorial to learn the basics • Good luck, Captain!' })
+      .setTimestamp();
+
+    // Add hero image if available
+    const heroImage = getHeroImageUrl(heroName);
+    if (heroImage) {
+      embed.setThumbnail(heroImage);
+    }
+
+    return embed;
   }
 
   static cityStatus(

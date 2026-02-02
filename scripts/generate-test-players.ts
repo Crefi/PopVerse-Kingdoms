@@ -23,10 +23,10 @@ const db = knex({
 
 const TEST_PLAYERS = [
   { username: 'TestWarrior', faction: 'cinema', offset: { x: 2, y: 1 } },
-  { username: 'NinjaPlayer', faction: 'otaku', offset: { x: -1, y: 3 } },
-  { username: 'ArcadeMaster', faction: 'arcade', offset: { x: 3, y: -2 } },
+  { username: 'NinjaPlayer', faction: 'anime', offset: { x: -1, y: 3 } },
+  { username: 'ArcadeMaster', faction: 'gamer', offset: { x: 3, y: -2 } },
   { username: 'FireLord99', faction: 'cinema', offset: { x: -2, y: -1 } },
-  { username: 'WindRunner', faction: 'otaku', offset: { x: 1, y: -3 } },
+  { username: 'WindRunner', faction: 'anime', offset: { x: 1, y: -3 } },
 ];
 
 async function generateTestPlayers(): Promise<void> {
@@ -108,14 +108,14 @@ async function generateTestPlayers(): Promise<void> {
     // Add a hero
     const heroNames: Record<string, string> = {
       cinema: 'John McClane',
-      otaku: 'Naruto Uzumaki',
-      arcade: 'Mario',
+      anime: 'Naruto Uzumaki',
+      gamer: 'Mario',
     };
     await db('heroes').insert({
       player_id: insertedPlayer.id,
       name: heroNames[testPlayer.faction],
       faction: testPlayer.faction,
-      element: testPlayer.faction === 'cinema' ? 'fire' : testPlayer.faction === 'otaku' ? 'wind' : 'water',
+      element: testPlayer.faction === 'cinema' ? 'fire' : testPlayer.faction === 'anime' ? 'wind' : 'water',
       rarity: 'common',
       level: 1 + Math.floor(Math.random() * 5),
       experience: 0,
@@ -134,7 +134,7 @@ async function generateTestPlayers(): Promise<void> {
       level: 1 + Math.floor(Math.random() * 3),
     });
 
-    const factionEmoji = testPlayer.faction === 'cinema' ? '🎬' : testPlayer.faction === 'otaku' ? '⚔️' : '🎮';
+    const factionEmoji = testPlayer.faction === 'cinema' ? '🎬' : testPlayer.faction === 'anime' ? '⚔️' : '🎮';
     console.log(`  ✅ Created ${factionEmoji} ${testPlayer.username} at (${x}, ${y})`);
   }
 

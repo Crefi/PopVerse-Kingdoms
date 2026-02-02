@@ -87,8 +87,8 @@ export class RallyService {
       return { success: false, error: 'You must be in a guild to start a rally.' };
     }
 
-    // Check if player is leader or officer
-    if (membership.role === 'member') {
+    // Check if player is leader or officer (Task 7: Officers can start rallies)
+    if (membership.role !== 'leader' && membership.role !== 'officer') {
       return { success: false, error: 'Only guild leaders and officers can start rallies.' };
     }
 

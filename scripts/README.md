@@ -52,3 +52,42 @@ Clears everything and regenerates the world map from scratch.
 | `npm run reset:full` | Reset + regenerate map |
 | `pm2 status` | Check if game is running |
 | `pm2 logs popverse-kingdoms` | View game logs |
+
+## Map Analysis & Debugging
+
+### Analyze Map Distribution
+```bash
+npx tsx scripts/analyze-map-distribution.ts
+```
+Shows detailed statistics about map generation:
+- Resource distribution by zone (temple/resource/spawn)
+- NPC distribution and density
+- Land parcel distribution
+- Terrain type percentages
+- Identifies potential issues with distribution
+
+Use this after regenerating the map to verify improvements.
+
+### Check Map Data
+```bash
+npx tsx scripts/check-map-data.ts
+```
+Quick check of map data status (terrain distribution, NPCs, resources).
+
+### Regenerate Map
+```bash
+npx tsx scripts/regenerate-map.ts
+```
+Regenerate the entire map with terrain and NPCs (preserves player positions).
+
+### Respawn NPCs
+```bash
+npx tsx scripts/respawn-npcs.ts
+```
+Respawn NPCs only (without regenerating terrain).
+
+### Clear Cache
+```bash
+npx tsx scripts/clear-cache.ts
+```
+Clear Redis cache (map images, etc.) - useful after map changes.

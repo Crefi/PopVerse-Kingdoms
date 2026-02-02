@@ -12,6 +12,8 @@ import {
 import type { Command, CommandContext } from '../../../infrastructure/discord/types.js';
 import { conquestService, ControlPoint } from '../../../domain/services/ConquestService.js';
 import { combatService, type CombatContext } from '../../../domain/services/CombatService.js';
+import { guildService } from '../../../domain/services/GuildService.js';
+import { guildDiscordService } from '../../../infrastructure/discord/GuildDiscordService.js';
 import { getDatabase } from '../../../infrastructure/database/connection.js';
 import { getRedis } from '../../../infrastructure/cache/redis.js';
 import { logger } from '../../../shared/utils/logger.js';
@@ -19,8 +21,8 @@ import type { Faction, TroopTier } from '../../../shared/types/index.js';
 
 const FACTION_EMOJIS: Record<Faction, string> = {
   cinema: '🔥',
-  otaku: '🌀',
-  arcade: '💧',
+  anime: '🌀',
+  gamer: '💧',
 };
 
 // Conquest rally constants
@@ -404,7 +406,7 @@ async function handleAttack(ctx: CommandContext): Promise<void> {
       .setTitle('⚔️ Control Point Captured!')
       .setColor(
         player.faction === 'cinema' ? 0xff4444 :
-        player.faction === 'otaku' ? 0x44ff44 :
+        player.faction === 'anime' ? 0x44ff44 :
         0x4444ff
       )
       .setDescription(
@@ -487,6 +489,14 @@ async function handleRally(ctx: CommandContext): Promise<void> {
     await ctx.interaction.editReply({
       content: '❌ You must be in a guild to start a conquest rally!\n\n' +
         '🛡️ **Conquest is a guild-focused event!** Join or create a guild to participate in rallies.',
+    });
+    return;
+  }
+
+  // Task 7: Only leaders and officers can start conquest rallies
+  if (membership.role !== 'leader' && membership.role !== 'officer') {
+    await ctx.interaction.editReply({
+      content: '❌ Only guild leaders and officers can start a conquest rally.',
     });
     return;
   }
@@ -665,6 +675,13 @@ async function createRally(
 
   // Show troop selection for the leader
   await showTroopSelection(interaction, rally, player, controlPoint, playerTroops, true);
+
+  // Task 6: Rally call notification to guild channel (message only, no role mention)
+  const guild = await guildService.getGuildById(membership.guild_id.toString());
+  if (guild?.discordChannelId) {
+    const message = `📢 **Conquest rally!** **${player.username}** is rallying **${membership.guild_name}** to capture **Control Point ${pointId}** at (${controlPoint.x}, ${controlPoint.y}). Join now!`;
+    await guildDiscordService.sendGuildAnnouncement(guild.discordChannelId, message);
+  }
 }
 
 /**
@@ -1291,6 +1308,15 @@ async function handleRallySend(
   // If attackers won, capture the point
   if (attackerWon) {
     await conquestService.captureControlPoint(rally.leaderId, rally.controlPointId);
+  }
+
+  // Task 6: Automated update to guild channel (territory captured)
+  if (attackerWon) {
+    const guild = await guildService.getGuildById(rally.guildId);
+    if (guild?.discordChannelId) {
+      const message = `🏰 **Territory captured!** **${rally.guildName}** has captured **Control Point ${rally.controlPointId}** at (${controlPoint.x}, ${controlPoint.y})!`;
+      await guildDiscordService.sendGuildAnnouncement(guild.discordChannelId, message);
+    }
   }
 
   // Update embed to show results

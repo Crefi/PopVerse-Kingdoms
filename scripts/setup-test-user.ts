@@ -15,22 +15,22 @@ const db = knex(knexConfig.development);
 // All heroes from the game
 const ALL_HEROES = [
   // Cinema (Fire)
-  { name: 'John McClane', faction: 'cinema', element: 'fire', rarity: 'legendary', attack: 150, defense: 100, speed: 80, hp: 1200 },
-  { name: 'Jason Bourne', faction: 'cinema', element: 'fire', rarity: 'epic', attack: 130, defense: 90, speed: 100, hp: 1000 },
-  { name: 'John Wick', faction: 'cinema', element: 'fire', rarity: 'legendary', attack: 160, defense: 80, speed: 90, hp: 1100 },
-  { name: 'T-800 Terminator', faction: 'cinema', element: 'fire', rarity: 'legendary', attack: 140, defense: 150, speed: 60, hp: 1500 },
+  { name: 'Ethan Hunt', faction: 'cinema', element: 'fire', rarity: 'common', attack: 55, defense: 40, speed: 30, hp: 200 },
+  { name: 'James Bond', faction: 'cinema', element: 'fire', rarity: 'rare', attack: 80, defense: 60, speed: 50, hp: 300 },
+  { name: 'John Wick', faction: 'cinema', element: 'fire', rarity: 'epic', attack: 110, defense: 75, speed: 65, hp: 450 },
+  { name: 'T-800 Terminator', faction: 'cinema', element: 'fire', rarity: 'legendary', attack: 160, defense: 130, speed: 70, hp: 750 },
   
-  // Otaku (Wind)
-  { name: 'Naruto', faction: 'otaku', element: 'wind', rarity: 'legendary', attack: 120, defense: 80, speed: 150, hp: 1000 },
-  { name: 'Edward Elric', faction: 'otaku', element: 'wind', rarity: 'epic', attack: 110, defense: 100, speed: 120, hp: 950 },
-  { name: 'Son Goku', faction: 'otaku', element: 'wind', rarity: 'legendary', attack: 180, defense: 70, speed: 140, hp: 1100 },
-  { name: 'Saitama', faction: 'otaku', element: 'wind', rarity: 'legendary', attack: 200, defense: 50, speed: 100, hp: 900 },
+  // Anime (Wind)
+  { name: 'Naruto Uzumaki', faction: 'anime', element: 'wind', rarity: 'common', attack: 50, defense: 35, speed: 45, hp: 200 },
+  { name: 'Edward Elric', faction: 'anime', element: 'wind', rarity: 'rare', attack: 75, defense: 55, speed: 55, hp: 280 },
+  { name: 'Son Goku', faction: 'anime', element: 'wind', rarity: 'epic', attack: 105, defense: 70, speed: 80, hp: 420 },
+  { name: 'Saitama', faction: 'anime', element: 'wind', rarity: 'legendary', attack: 200, defense: 100, speed: 90, hp: 600 },
   
-  // Arcade (Water)
-  { name: 'Mario', faction: 'arcade', element: 'water', rarity: 'epic', attack: 100, defense: 120, speed: 90, hp: 1100 },
-  { name: 'Ryu', faction: 'arcade', element: 'water', rarity: 'epic', attack: 130, defense: 110, speed: 95, hp: 1050 },
-  { name: 'Liu Kang', faction: 'arcade', element: 'water', rarity: 'legendary', attack: 140, defense: 100, speed: 110, hp: 1000 },
-  { name: 'Kyo Kusanagi', faction: 'arcade', element: 'water', rarity: 'legendary', attack: 135, defense: 90, speed: 120, hp: 980 },
+  // Gamer (Water)
+  { name: 'Master Chief', faction: 'gamer', element: 'water', rarity: 'common', attack: 45, defense: 50, speed: 30, hp: 220 },
+  { name: 'Kratos', faction: 'gamer', element: 'water', rarity: 'rare', attack: 70, defense: 70, speed: 45, hp: 320 },
+  { name: 'Geralt of Rivia', faction: 'gamer', element: 'water', rarity: 'epic', attack: 95, defense: 90, speed: 60, hp: 480 },
+  { name: 'Solid Snake', faction: 'gamer', element: 'water', rarity: 'legendary', attack: 140, defense: 140, speed: 75, hp: 800 },
 ];
 
 async function setupTestUser(discordId: string) {
